@@ -1,6 +1,9 @@
 import { createContext, useContext, useState, useRef, useEffect, useCallback, ReactNode } from 'react';
 import type { Song } from '../types';
 import { transformAudioUrl } from '../utils/urlUtils';
+import { serviceContainer } from '../core/di/ServiceContainer';
+
+type RepeatMode = 'off' | 'all' | 'one';
 
 interface PlayerContextType {
   currentSong: Song | null;
@@ -10,16 +13,18 @@ interface PlayerContextType {
   volume: number;
   queue: Song[];
   librarySongs: Song[];
+  isShuffled: boolean;
+  repeatMode: RepeatMode;
   playSong: (song: Song, queue?: Song[]) => void;
   togglePlayPause: () => void;
   setCurrentTime: (time: number) => void;
   setVolume: (volume: number) => void;
   nextSong: () => void;
   previousSong: () => void;
-  isLiked: boolean;
-  isDisliked: boolean;
-  toggleLike: () => void;
-  toggleDislike: () => void;
+  toggleShuffle: () => void;
+  toggleRepeat: () => void;
+  toggleLike: (userId: string) => Promise<void>;
+  toggleDislike: (userId: string) => Promise<void>;
   setLibrarySongs: (songs: Song[]) => void;
 }
 
@@ -40,8 +45,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [volume, setVolume] = useState(1);
   const [queue, setQueue] = useState<Song[]>([]);
   const [librarySongs, setLibrarySongs] = useState<Song[]>([]);
-  const [isLiked, setIsLiked] = useState(false);
-  const [isDisliked, setIsDisliked] = useState(false);
+  const [isShuffled, setIsShuffled] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
+  const [originalQueue, setOriginalQueue] = useState<Song[]>([]); // Store original queue order for shuffle
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Memoize setLibrarySongs to prevent infinite re-renders
@@ -66,25 +72,48 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const handleEnded = () => {
       setQueue((prevQueue) => {
         setCurrentSong((prevSong) => {
-          if (prevQueue.length > 0 && prevSong) {
-            const currentIndex = prevQueue.findIndex((s) => s.id === prevSong.id);
-            const nextIndex = (currentIndex + 1) % prevQueue.length;
-            const nextSong = prevQueue[nextIndex];
-            if (audioRef.current && nextSong && nextSong.audio_url) {
-              const transformedUrl = transformAudioUrl(nextSong.audio_url);
+          if (!prevSong || prevQueue.length === 0) {
+            setIsPlaying(false);
+            return prevSong;
+          }
+
+          // Handle repeat one mode
+          if (repeatMode === 'one') {
+            if (audioRef.current && prevSong.audio_url) {
+              const transformedUrl = transformAudioUrl(prevSong.audio_url);
               audioRef.current.src = transformedUrl;
               audioRef.current.crossOrigin = 'anonymous';
               audioRef.current.load();
               audioRef.current.play().catch((error) => {
-                console.error('Error playing next song:', error);
+                console.error('Error replaying song:', error);
                 setIsPlaying(false);
               });
             }
-            return nextSong;
-          } else {
+            return prevSong;
+          }
+
+          // Handle repeat all or off mode
+          const currentIndex = prevQueue.findIndex((s) => s.id === prevSong.id);
+          const nextIndex = (currentIndex + 1) % prevQueue.length;
+          
+          // If repeat is off and we're at the last song, stop
+          if (repeatMode === 'off' && nextIndex === 0) {
             setIsPlaying(false);
             return prevSong;
           }
+
+          const nextSong = prevQueue[nextIndex];
+          if (audioRef.current && nextSong && nextSong.audio_url) {
+            const transformedUrl = transformAudioUrl(nextSong.audio_url);
+            audioRef.current.src = transformedUrl;
+            audioRef.current.crossOrigin = 'anonymous';
+            audioRef.current.load();
+            audioRef.current.play().catch((error) => {
+              console.error('Error playing next song:', error);
+              setIsPlaying(false);
+            });
+          }
+          return nextSong;
         });
         return prevQueue;
       });
@@ -105,7 +134,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
     };
-  }, []);
+  }, [repeatMode]);
 
   const playSong = useCallback((song: Song, newQueue?: Song[]) => {
     // Set song immediately to show player UI (synchronous, no delay)
@@ -127,6 +156,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         if (prevIds === newIds && prevQueue.length === newQueue.length) {
           return prevQueue; // Return same reference to prevent re-render
         }
+        // Store original queue order for shuffle functionality
+        setOriginalQueue([...newQueue]);
         return newQueue;
       });
     }
@@ -194,29 +225,165 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const nextSong = () => {
     if (queue.length > 0 && currentSong) {
-      const currentIndex = queue.findIndex((s) => s.id === currentSong.id);
-      const nextIndex = (currentIndex + 1) % queue.length;
-      playSong(queue[nextIndex], queue);
+      let nextSong: Song;
+      
+      if (isShuffled && originalQueue.length > 0) {
+        // Get next random song from original queue (excluding current)
+        const availableSongs = originalQueue.filter(s => s.id !== currentSong.id);
+        if (availableSongs.length > 0) {
+          const randomIndex = Math.floor(Math.random() * availableSongs.length);
+          nextSong = availableSongs[randomIndex];
+        } else {
+          // Fallback to sequential if no other songs
+          const currentIndex = queue.findIndex((s) => s.id === currentSong.id);
+          const nextIndex = (currentIndex + 1) % queue.length;
+          nextSong = queue[nextIndex];
+        }
+      } else {
+        // Sequential playback
+        const currentIndex = queue.findIndex((s) => s.id === currentSong.id);
+        const nextIndex = (currentIndex + 1) % queue.length;
+        nextSong = queue[nextIndex];
+      }
+      
+      playSong(nextSong, queue);
     }
   };
 
   const previousSong = () => {
     if (queue.length > 0 && currentSong) {
+      // For shuffle, we'll just go to previous in current queue
+      // For sequential, go to previous song
       const currentIndex = queue.findIndex((s) => s.id === currentSong.id);
       const prevIndex = currentIndex === 0 ? queue.length - 1 : currentIndex - 1;
       playSong(queue[prevIndex], queue);
     }
   };
 
-  const toggleLike = () => {
-    setIsLiked(!isLiked);
-    if (isDisliked) setIsDisliked(false);
+  const toggleShuffle = () => {
+    setIsShuffled((prev) => !prev);
   };
 
-  const toggleDislike = () => {
-    setIsDisliked(!isDisliked);
-    if (isLiked) setIsLiked(false);
+  const toggleRepeat = () => {
+    setRepeatMode((prev) => {
+      if (prev === 'off') return 'all';
+      if (prev === 'all') return 'one';
+      return 'off';
+    });
   };
+
+  const toggleLike = useCallback(async (userId: string) => {
+    if (!currentSong) {
+      console.log('toggleLike: No currentSong');
+      return;
+    }
+    if (userId === 'guest') {
+      console.log('toggleLike: User is guest, cannot like');
+      return;
+    }
+    
+    console.log('toggleLike: Current song:', currentSong.id, 'isLiked:', currentSong.isLiked, 'isDisliked:', currentSong.isDisliked, 'userId:', userId);
+    const wasLiked = currentSong.isLiked || false;
+    const wasDisliked = currentSong.isDisliked || false;
+    
+    // Optimistically update UI - backend will toggle the like state
+    const updatedSong: Song = {
+      ...currentSong,
+      isLiked: !wasLiked,
+      isDisliked: false, // Liking removes dislike
+      likesCount: wasLiked ? Math.max(0, (currentSong.likesCount || 0) - 1) : (currentSong.likesCount || 0) + 1,
+      dislikesCount: wasDisliked ? Math.max(0, (currentSong.dislikesCount || 0) - 1) : (currentSong.dislikesCount || 0),
+    };
+    
+    console.log('toggleLike: Updating song to:', updatedSong.isLiked, 'likesCount:', updatedSong.likesCount);
+    setCurrentSong(updatedSong);
+    
+    // Update in queue
+    setQueue((prevQueue) =>
+      prevQueue.map((s) => (s.id === currentSong.id ? updatedSong : s))
+    );
+    
+    // Update in library
+    setLibrarySongs((prevSongs) =>
+      prevSongs.map((s) => (s.id === currentSong.id ? updatedSong : s))
+    );
+    
+    try {
+      console.log('toggleLike: Calling API with userId:', userId, 'songId:', currentSong.id);
+      // Backend handles toggle - calling like on an already liked song will unlike it
+      await serviceContainer.songLikesService.likeSong({
+        userId,
+        songId: currentSong.id,
+      });
+      console.log('toggleLike: API call successful');
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      // Revert on error
+      setCurrentSong(currentSong);
+      setQueue((prevQueue) =>
+        prevQueue.map((s) => (s.id === currentSong.id ? currentSong : s))
+      );
+      setLibrarySongs((prevSongs) =>
+        prevSongs.map((s) => (s.id === currentSong.id ? currentSong : s))
+      );
+    }
+  }, [currentSong]);
+
+  const toggleDislike = useCallback(async (userId: string) => {
+    if (!currentSong) {
+      console.log('toggleDislike: No currentSong');
+      return;
+    }
+    if (userId === 'guest') {
+      console.log('toggleDislike: User is guest, cannot dislike');
+      return;
+    }
+    
+    console.log('toggleDislike: Current song:', currentSong.id, 'isLiked:', currentSong.isLiked, 'isDisliked:', currentSong.isDisliked, 'userId:', userId);
+    const wasLiked = currentSong.isLiked || false;
+    const wasDisliked = currentSong.isDisliked || false;
+    
+    // Optimistically update UI - backend will toggle the dislike state
+    const updatedSong: Song = {
+      ...currentSong,
+      isLiked: false, // Disliking removes like
+      isDisliked: !wasDisliked,
+      likesCount: wasLiked ? Math.max(0, (currentSong.likesCount || 0) - 1) : (currentSong.likesCount || 0),
+      dislikesCount: wasDisliked ? Math.max(0, (currentSong.dislikesCount || 0) - 1) : (currentSong.dislikesCount || 0) + 1,
+    };
+    
+    console.log('toggleDislike: Updating song to:', updatedSong.isDisliked, 'dislikesCount:', updatedSong.dislikesCount);
+    
+    setCurrentSong(updatedSong);
+    
+    // Update in queue
+    setQueue((prevQueue) =>
+      prevQueue.map((s) => (s.id === currentSong.id ? updatedSong : s))
+    );
+    
+    // Update in library
+    setLibrarySongs((prevSongs) =>
+      prevSongs.map((s) => (s.id === currentSong.id ? updatedSong : s))
+    );
+    
+    try {
+      // Backend handles toggle - calling dislike on an already disliked song will undislike it
+      await serviceContainer.songLikesService.dislikeSong({
+        userId,
+        songId: currentSong.id,
+      });
+    } catch (error) {
+      console.error('Error toggling dislike:', error);
+      // Revert on error
+      setCurrentSong(currentSong);
+      setQueue((prevQueue) =>
+        prevQueue.map((s) => (s.id === currentSong.id ? currentSong : s))
+      );
+      setLibrarySongs((prevSongs) =>
+        prevSongs.map((s) => (s.id === currentSong.id ? currentSong : s))
+      );
+    }
+  }, [currentSong]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -234,14 +401,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         volume,
         queue,
         librarySongs,
+        isShuffled,
+        repeatMode,
         playSong,
         togglePlayPause,
         setCurrentTime,
         setVolume,
         nextSong,
         previousSong,
-        isLiked,
-        isDisliked,
+        toggleShuffle,
+        toggleRepeat,
         toggleLike,
         toggleDislike,
         setLibrarySongs: setLibrarySongsMemoized,

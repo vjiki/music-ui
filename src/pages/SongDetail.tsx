@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { usePlayer } from '../contexts/PlayerContext';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   Play, 
   Pause, 
@@ -9,6 +10,7 @@ import {
   Shuffle, 
   Repeat, 
   Heart, 
+  HeartOff,
   Share2,
   MoreHorizontal,
   ArrowLeft,
@@ -20,6 +22,7 @@ export default function SongDetail() {
   const { songId } = useParams<{ songId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { currentUserId } = useAuth();
   const {
     currentSong,
     queue,
@@ -30,6 +33,12 @@ export default function SongDetail() {
     nextSong,
     previousSong,
     playSong,
+    toggleShuffle,
+    toggleRepeat,
+    isShuffled,
+    repeatMode,
+    toggleLike,
+    toggleDislike,
   } = usePlayer();
 
   const [isHovering, setIsHovering] = useState(false);
@@ -152,13 +161,34 @@ export default function SongDetail() {
                   </div>
 
                   {/* Bottom Right Controls */}
-                  <div className="absolute bottom-4 right-4">
+                  <div className="absolute bottom-4 right-4 flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-2 rounded-full bg-white bg-opacity-20 text-white hover:bg-opacity-30 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (song) {
+                          toggleLike(currentUserId);
+                        }
+                      }}
+                      className={`p-2 rounded-full hover:bg-opacity-30 transition-colors ${
+                        song.isLiked ? 'bg-red-500 bg-opacity-30 text-red-500' : 'bg-white bg-opacity-20 text-white'
+                      }`}
                     >
-                      <Heart size={20} />
+                      <Heart size={20} fill={song.isLiked ? 'currentColor' : 'none'} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (song) {
+                          toggleDislike(currentUserId);
+                        }
+                      }}
+                      className={`p-2 rounded-full hover:bg-opacity-30 transition-colors ${
+                        song.isDisliked ? 'bg-blue-500 bg-opacity-30 text-blue-500' : 'bg-white bg-opacity-20 text-white'
+                      }`}
+                    >
+                      <HeartOff size={20} fill={song.isDisliked ? 'currentColor' : 'none'} />
                     </button>
                   </div>
 
@@ -202,21 +232,25 @@ export default function SongDetail() {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Toggle shuffle
+                        toggleShuffle();
                       }}
-                      className="p-2 rounded-full bg-white bg-opacity-20 text-white hover:bg-opacity-30 transition-colors"
+                      className={`p-2 rounded-full hover:bg-opacity-30 transition-colors ${
+                        isShuffled ? 'bg-yellow-500 bg-opacity-30 text-yellow-500' : 'bg-white bg-opacity-20 text-white'
+                      }`}
                     >
-                      <Shuffle size={20} />
+                      <Shuffle size={20} fill={isShuffled ? 'currentColor' : 'none'} />
                     </button>
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Toggle repeat
+                        toggleRepeat();
                       }}
-                      className="p-2 rounded-full bg-white bg-opacity-20 text-white hover:bg-opacity-30 transition-colors"
+                      className={`p-2 rounded-full hover:bg-opacity-30 transition-colors ${
+                        repeatMode !== 'off' ? 'bg-yellow-500 bg-opacity-30 text-yellow-500' : 'bg-white bg-opacity-20 text-white'
+                      }`}
                     >
-                      <Repeat size={20} />
+                      <Repeat size={20} fill={repeatMode === 'one' ? 'currentColor' : 'none'} />
                     </button>
                   </div>
                 </div>
@@ -316,9 +350,29 @@ export default function SongDetail() {
               </button>
               <button 
                 type="button"
-                className="p-3 bg-white bg-opacity-10 text-white rounded-lg hover:bg-opacity-20 transition-colors"
+                onClick={() => {
+                  if (song) {
+                    toggleLike(currentUserId);
+                  }
+                }}
+                className={`p-3 rounded-lg hover:bg-opacity-20 transition-colors ${
+                  song.isLiked ? 'bg-red-500 bg-opacity-20 text-red-500' : 'bg-white bg-opacity-10 text-white'
+                }`}
               >
-                <Heart size={20} />
+                <Heart size={20} fill={song.isLiked ? 'currentColor' : 'none'} />
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  if (song) {
+                    toggleDislike(currentUserId);
+                  }
+                }}
+                className={`p-3 rounded-lg hover:bg-opacity-20 transition-colors ${
+                  song.isDisliked ? 'bg-blue-500 bg-opacity-20 text-blue-500' : 'bg-white bg-opacity-10 text-white'
+                }`}
+              >
+                <HeartOff size={20} fill={song.isDisliked ? 'currentColor' : 'none'} />
               </button>
               <button 
                 type="button"
@@ -371,9 +425,12 @@ export default function SongDetail() {
         <div className="flex items-center justify-center gap-4 mb-8">
           <button 
             type="button"
-            className="p-2 rounded hover:bg-white hover:bg-opacity-10 text-gray-400 hover:text-white transition-colors"
+            onClick={toggleShuffle}
+            className={`p-2 rounded hover:bg-white hover:bg-opacity-10 transition-colors ${
+              isShuffled ? 'text-yellow-500' : 'text-gray-400 hover:text-white'
+            }`}
           >
-            <Shuffle size={20} />
+            <Shuffle size={20} fill={isShuffled ? 'currentColor' : 'none'} />
           </button>
           <button
             type="button"
@@ -402,9 +459,12 @@ export default function SongDetail() {
           </button>
           <button 
             type="button"
-            className="p-2 rounded hover:bg-white hover:bg-opacity-10 text-gray-400 hover:text-white transition-colors"
+            onClick={toggleRepeat}
+            className={`p-2 rounded hover:bg-white hover:bg-opacity-10 transition-colors ${
+              repeatMode !== 'off' ? 'text-yellow-500' : 'text-gray-400 hover:text-white'
+            }`}
           >
-            <Repeat size={20} />
+            <Repeat size={20} fill={repeatMode === 'one' ? 'currentColor' : 'none'} />
           </button>
         </div>
       </div>

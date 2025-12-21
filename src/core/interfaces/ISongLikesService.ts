@@ -1,4 +1,4 @@
-import type { SongLikeRequest, SongLikeResponse } from '../../types';
+import type { SongLikeRequest } from '../../types';
 
 /**
  * Interface for song likes service
@@ -7,5 +7,4 @@ import type { SongLikeRequest, SongLikeResponse } from '../../types';
 export interface ISongLikesService {
   likeSong(request: SongLikeRequest): Promise<void>;
   dislikeSong(request: SongLikeRequest): Promise<void>;
-  getLikeDislikeInfo(songId: string, userId: string): Promise<SongLikeResponse>;
 }

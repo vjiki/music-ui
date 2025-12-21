@@ -71,10 +71,18 @@ export class SongsService implements ISongsService {
     const requestPromise = api.get<Song[]>(`/api/v1/songs/${userId}`)
       .then((response) => {
         const now = Date.now();
+        // Ensure all songs have like/dislike properties with default values
+        const songsWithDefaults = response.data.map(song => ({
+          ...song,
+          isLiked: song.isLiked ?? false,
+          isDisliked: song.isDisliked ?? false,
+          likesCount: song.likesCount ?? 0,
+          dislikesCount: song.dislikesCount ?? 0,
+        }));
         // Store result AND promise reference in cache IMMEDIATELY (synchronously)
         // This prevents race conditions and maintains promise identity for React Cache
         resultCache.set(userId, { 
-          data: response.data, 
+          data: songsWithDefaults, 
           promise: requestPromise, // Store the promise reference itself
           timestamp: now 
         });
@@ -88,7 +96,7 @@ export class SongsService implements ISongsService {
             resultCache.delete(userId);
           }
         }, CACHE_TTL);
-        return response.data;
+        return songsWithDefaults;
       })
       .catch((error) => {
         // Remove from cache on error

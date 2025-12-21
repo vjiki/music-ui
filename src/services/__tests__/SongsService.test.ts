@@ -36,6 +36,10 @@ describe('SongsService - Request Deduplication (API Flooding Prevention)', () =>
       artist: 'Test Artist',
       audio_url: 'https://example.com/audio.mp3',
       cover: 'https://example.com/cover.jpg',
+      isLiked: false,
+      isDisliked: false,
+      likesCount: 0,
+      dislikesCount: 0,
     },
   ];
 
@@ -129,7 +133,7 @@ describe('SongsService - Request Deduplication (API Flooding Prevention)', () =>
     
     mockGet
       .mockResolvedValueOnce({ data: mockSongs })
-      .mockResolvedValueOnce({ data: [...mockSongs, { id: '2', title: 'New Song', artist: 'New Artist', audio_url: '', cover: '' }] });
+      .mockResolvedValueOnce({ data: [...mockSongs, { id: '2', title: 'New Song', artist: 'New Artist', audio_url: '', cover: '', isLiked: false, isDisliked: false, likesCount: 0, dislikesCount: 0 }] });
 
     // First request
     const result1 = await songsService.getSongs(userId);

@@ -28,8 +28,8 @@ function ProfileContent() {
     }
   }, [songs, setLibrarySongs]);
 
-  const likedSongs = librarySongs.filter((s) => s); // TODO: Get actual liked songs
-  const dislikedSongs: typeof librarySongs = []; // TODO: Get actual disliked songs
+  const likedSongs = librarySongs.filter((s) => s.isLiked);
+  const dislikedSongs = librarySongs.filter((s) => s.isDisliked);
 
   const displayName = user?.nickname || user?.email || 'Music Lover';
   const displayEmail = isAuthenticated && user?.email ? user.email : 'Guest';

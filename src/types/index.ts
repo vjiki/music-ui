@@ -4,6 +4,10 @@ export interface Song {
   audio_url: string;
   cover: string;
   title: string;
+  isLiked: boolean;
+  isDisliked: boolean;
+  likesCount: number;
+  dislikesCount: number;
 }
 
 export interface User {
@@ -53,11 +57,6 @@ export interface Story {
   storyPreviewURL?: string;
   isViewed: boolean;
   createdAt: string;
-}
-
-export interface SongLikeResponse {
-  isLiked: boolean;
-  isDisliked: boolean;
 }
 
 export interface SongLikeRequest {

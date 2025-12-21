@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { usePlayer } from '../contexts/PlayerContext';
-import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Heart, MoreHorizontal } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Heart, HeartOff, MoreHorizontal } from 'lucide-react';
 import SafeImage from './SafeImage';
 
 export default function Player() {
   const navigate = useNavigate();
+  const { currentUserId } = useAuth();
   const {
     currentSong,
     isPlaying,
@@ -13,6 +15,12 @@ export default function Player() {
     togglePlayPause,
     nextSong,
     previousSong,
+    toggleShuffle,
+    toggleRepeat,
+    isShuffled,
+    repeatMode,
+    toggleLike,
+    toggleDislike,
   } = usePlayer();
 
   if (!currentSong) return null;
@@ -89,11 +97,39 @@ export default function Player() {
           className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center gap-2" 
           onClick={(e) => e.stopPropagation()}
         >
-          <button className="p-2 rounded hover:bg-white hover:bg-opacity-10 text-gray-400 hover:text-white transition-colors">
-            <Heart size={20} />
+          <button 
+            onClick={async (e) => {
+              e.stopPropagation();
+              console.log('Dislike button clicked, currentSong:', currentSong?.id, 'isDisliked:', currentSong?.isDisliked, 'currentUserId:', currentUserId);
+              if (currentSong && currentUserId && currentUserId !== 'guest') {
+                try {
+                  await toggleDislike(currentUserId);
+                  console.log('Dislike toggled successfully');
+                } catch (error) {
+                  console.error('Error toggling dislike:', error);
+                }
+              } else {
+                console.log('Cannot dislike: currentSong missing or user is guest');
+              }
+            }}
+            className={`p-2 rounded hover:bg-white hover:bg-opacity-10 transition-colors ${
+              currentSong?.isDisliked ? 'text-blue-500' : 'text-gray-400 hover:text-white'
+            }`}
+            title={currentSong?.isDisliked ? 'Remove dislike' : 'Dislike'}
+            disabled={!currentSong || currentUserId === 'guest'}
+          >
+            <HeartOff size={20} fill={currentSong?.isDisliked ? 'currentColor' : 'none'} strokeWidth={currentSong?.isDisliked ? 0 : 2} />
           </button>
-          <button className="p-2 rounded hover:bg-white hover:bg-opacity-10 text-gray-400 hover:text-white transition-colors">
-            <Shuffle size={20} />
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleShuffle();
+            }}
+            className={`p-2 rounded hover:bg-white hover:bg-opacity-10 transition-colors ${
+              isShuffled ? 'text-yellow-500' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Shuffle size={20} fill={isShuffled ? 'currentColor' : 'none'} />
           </button>
           <button
             onClick={previousSong}
@@ -113,8 +149,39 @@ export default function Player() {
           >
             <SkipForward size={20} fill="currentColor" />
           </button>
-          <button className="p-2 rounded hover:bg-white hover:bg-opacity-10 text-gray-400 hover:text-white transition-colors">
-            <Repeat size={20} />
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleRepeat();
+            }}
+            className={`p-2 rounded hover:bg-white hover:bg-opacity-10 transition-colors ${
+              repeatMode !== 'off' ? 'text-yellow-500' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Repeat size={20} fill={repeatMode === 'one' ? 'currentColor' : 'none'} />
+          </button>
+          <button 
+            onClick={async (e) => {
+              e.stopPropagation();
+              console.log('Like button clicked, currentSong:', currentSong?.id, 'isLiked:', currentSong?.isLiked, 'currentUserId:', currentUserId);
+              if (currentSong && currentUserId && currentUserId !== 'guest') {
+                try {
+                  await toggleLike(currentUserId);
+                  console.log('Like toggled successfully');
+                } catch (error) {
+                  console.error('Error toggling like:', error);
+                }
+              } else {
+                console.log('Cannot like: currentSong missing or user is guest');
+              }
+            }}
+            className={`p-2 rounded hover:bg-white hover:bg-opacity-10 transition-colors ${
+              currentSong?.isLiked ? 'text-red-500' : 'text-gray-400 hover:text-white'
+            }`}
+            title={currentSong?.isLiked ? 'Unlike' : 'Like'}
+            disabled={!currentSong || currentUserId === 'guest'}
+          >
+            <Heart size={20} fill={currentSong?.isLiked ? 'currentColor' : 'none'} strokeWidth={currentSong?.isLiked ? 0 : 2} />
           </button>
         </div>
 
