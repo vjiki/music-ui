@@ -2,7 +2,10 @@ import axios from 'axios';
 import type { SongLikeRequest, SongLikeResponse } from '../types';
 import type { ISongLikesService } from '../core/interfaces/ISongLikesService';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://music-back-g2u6.onrender.com';
+// In development, use proxy (no CORS needed)
+// In production, use full URL (CORS required)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+  (import.meta.env.DEV ? '' : 'https://music-back-g2u6.onrender.com');
 
 const api = axios.create({
   baseURL: API_BASE_URL,

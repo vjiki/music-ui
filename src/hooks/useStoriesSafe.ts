@@ -1,4 +1,4 @@
-import { use } from 'react';
+import { use, useMemo } from 'react';
 import { serviceContainer } from '../core/di/ServiceContainer';
 import type { Story } from '../types';
 
@@ -8,16 +8,16 @@ import type { Story } from '../types';
  * Leverages React Cache through repository pattern
  */
 export function useStoriesSafe(userId: string | null): Story[] {
-  if (!userId) {
-    return [];
-  }
+  // Always call use() unconditionally, but use a cached promise for invalid users
+  const storiesPromise = useMemo(() => {
+    if (!userId || userId === 'guest') {
+      // Return a cached empty promise for invalid users
+      return Promise.resolve([] as Story[]);
+    }
+    // React Cache in the repository will handle deduplication for real users
+    return serviceContainer.storiesRepository.getStories(userId);
+  }, [userId]);
   
-  try {
-    const storiesPromise = serviceContainer.storiesRepository.getStories(userId);
-    return use(storiesPromise);
-  } catch (error) {
-    console.error('Failed to load stories:', error);
-    return [];
-  }
+  return use(storiesPromise);
 }
 

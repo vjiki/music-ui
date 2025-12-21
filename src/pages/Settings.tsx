@@ -231,9 +231,12 @@ export default function Settings() {
                 Log out
               </button>
             </>
-          ) : (
+            ) : (
             <button
-              onClick={() => navigate('/profile')}
+              onClick={() => {
+                // Navigate to profile which will show login
+                navigate('/profile');
+              }}
               className="w-full px-4 py-3 text-left text-blue-500 hover:bg-white hover:bg-opacity-5"
             >
               Add account

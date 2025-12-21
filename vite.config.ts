@@ -6,7 +6,14 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    open: true
+    open: true,
+    proxy: {
+      '/api': {
+        target: 'https://music-back-g2u6.onrender.com',
+        changeOrigin: true,
+        secure: true,
+      }
+    }
   }
 })
 

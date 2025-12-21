@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePlayer } from '../contexts/PlayerContext';
@@ -6,11 +6,13 @@ import { useSongs } from '../hooks/useSongs';
 import { List } from 'lucide-react';
 import SuspenseFallback from '../components/SuspenseFallback';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import LoginView from '../components/LoginView';
 
 function ProfileContent() {
   const navigate = useNavigate();
   const { currentUserId, user, isAuthenticated } = useAuth();
   const { playSong, librarySongs, setLibrarySongs } = usePlayer();
+  const [showLogin, setShowLogin] = useState(false);
   
   // Use React 19's use() hook with cached repositories
   const songs = useSongs(currentUserId);
@@ -27,6 +29,64 @@ function ProfileContent() {
 
   const displayName = user?.nickname || user?.email || 'Music Lover';
   const displayEmail = isAuthenticated && user?.email ? user.email : 'Guest';
+
+  // Close login view when user becomes authenticated
+  useEffect(() => {
+    if (isAuthenticated && showLogin) {
+      setShowLogin(false);
+    }
+  }, [isAuthenticated, showLogin]);
+
+  // Show login view if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <>
+        <div className="flex-1 overflow-y-auto bg-black px-5 pt-6 pb-24">
+          {/* Header with Settings button */}
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold">Profile</h1>
+            <button
+              onClick={() => navigate('/settings')}
+              className="p-2 rounded hover:bg-white hover:bg-opacity-10"
+            >
+              <List size={24} className="text-white" />
+            </button>
+          </div>
+
+          {/* Guest Profile */}
+          <div className="flex flex-col items-center gap-4 mb-6 py-8">
+            <div className="w-20 h-20 rounded-full bg-white bg-opacity-10 flex items-center justify-center">
+              <span className="text-4xl">👤</span>
+            </div>
+            <div className="text-center">
+              <h2 className="text-xl font-semibold mb-1">Music Lover</h2>
+              <p className="text-sm text-gray-400">Guest</p>
+            </div>
+          </div>
+
+          {/* Login Button */}
+          <div className="px-5">
+            <button
+              onClick={() => setShowLogin(true)}
+              className="w-full py-3.5 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+            >
+              Sign In
+            </button>
+          </div>
+        </div>
+
+        {showLogin && (
+          <div className="fixed inset-0 z-50">
+            <LoginView
+              onClose={() => {
+                setShowLogin(false);
+              }}
+            />
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-y-auto bg-black px-5 pt-6 pb-24">

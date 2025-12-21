@@ -1,4 +1,4 @@
-import { use } from 'react';
+import { use, useMemo } from 'react';
 import { serviceContainer } from '../core/di/ServiceContainer';
 import type { Playlist } from '../types';
 
@@ -8,16 +8,16 @@ import type { Playlist } from '../types';
  * Leverages React Cache through repository pattern
  */
 export function usePlaylistsSafe(userId: string | null): Playlist[] {
-  if (!userId) {
-    return [];
-  }
+  // Always call use() unconditionally, but use a cached promise for invalid users
+  const playlistsPromise = useMemo(() => {
+    if (!userId || userId === 'guest') {
+      // Return a cached empty promise for invalid users
+      return Promise.resolve([] as Playlist[]);
+    }
+    // React Cache in the repository will handle deduplication for real users
+    return serviceContainer.playlistsRepository.getPlaylists(userId);
+  }, [userId]);
   
-  try {
-    const playlistsPromise = serviceContainer.playlistsRepository.getPlaylists(userId);
-    return use(playlistsPromise);
-  } catch (error) {
-    console.error('Failed to load playlists:', error);
-    return [];
-  }
+  return use(playlistsPromise);
 }
 
