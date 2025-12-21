@@ -21,6 +21,7 @@ export default function Player() {
     repeatMode,
     toggleLike,
     toggleDislike,
+    seekTo,
   } = usePlayer();
 
   if (!currentSong) return null;
@@ -34,31 +35,49 @@ export default function Player() {
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  const handlePlayerClick = () => {
-    // Navigate to minimal/centered view when clicking on player bar
-    navigate(`/song/${currentSong.id}?view=minimal`);
-  };
-
   const handleCoverClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     // Navigate to minimal/centered view when clicking on cover image
     navigate(`/song/${currentSong.id}?view=minimal`);
   };
 
+  const handlePlayerBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only seek if clicking on the bar itself (not on buttons or cover)
+    // Check if the click target is the progress bar or the player content area
+    const target = e.target as HTMLElement;
+    // If clicking on a button, input, or the cover image, don't seek
+    if (target.closest('button') || target.closest('img') || target.closest('[class*="w-14"]')) {
+      return;
+    }
+    // Otherwise, seek to that position
+    if (duration > 0) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const percentage = clickX / rect.width;
+      const newTime = percentage * duration;
+      seekTo(newTime);
+    }
+  };
+
   return (
-    <div className="relative h-20 bg-black border-t border-gray-900">
-      {/* Progress Bar at top */}
-      <div className="absolute left-0 right-0 top-0 h-1 bg-gray-800">
+    <div 
+      className="relative h-20 bg-black border-t border-gray-900 cursor-pointer"
+      onClick={handlePlayerBarClick}
+    >
+      {/* Full-width Progress Bar Background - fills entire sidebar */}
+      <div 
+        className="absolute inset-0 z-0"
+      >
+        {/* Progress fill - fills from left to right across entire bar height */}
         <div
-          className="h-full bg-yellow-500 transition-all"
+          className="absolute inset-0 bg-yellow-500 bg-opacity-20 transition-all origin-left"
           style={{ width: `${progress}%` }}
         />
       </div>
 
-      {/* Player Content - Entire bar is clickable */}
+      {/* Player Content */}
       <div 
-        onClick={handlePlayerClick}
-        className="w-full px-4 h-full flex items-center cursor-pointer hover:bg-white hover:bg-opacity-5 transition-colors relative"
+        className="w-full px-4 h-full flex items-center hover:bg-white hover:bg-opacity-5 transition-colors relative z-10"
       >
         {/* Left Section - Album Art and Song Info */}
         <div className="flex items-center gap-3 flex-shrink-0 min-w-0 w-[200px]">

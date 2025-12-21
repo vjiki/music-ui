@@ -25,6 +25,7 @@ interface PlayerContextType {
   toggleRepeat: () => void;
   toggleLike: (userId: string) => Promise<void>;
   toggleDislike: (userId: string) => Promise<void>;
+  seekTo: (time: number) => void;
   setLibrarySongs: (songs: Song[]) => void;
 }
 
@@ -391,6 +392,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [volume]);
 
+  const seekTo = useCallback((time: number) => {
+    const audio = audioRef.current;
+    if (audio && duration > 0) {
+      const clampedTime = Math.max(0, Math.min(time, duration));
+      audio.currentTime = clampedTime;
+      setCurrentTime(clampedTime);
+    }
+  }, [duration]);
+
   return (
     <PlayerContext.Provider
       value={{
@@ -413,6 +423,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         toggleRepeat,
         toggleLike,
         toggleDislike,
+        seekTo,
         setLibrarySongs: setLibrarySongsMemoized,
       }}
     >

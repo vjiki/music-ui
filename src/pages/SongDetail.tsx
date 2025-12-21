@@ -39,6 +39,7 @@ export default function SongDetail() {
     repeatMode,
     toggleLike,
     toggleDislike,
+    seekTo,
   } = usePlayer();
 
   const [isHovering, setIsHovering] = useState(false);
@@ -92,6 +93,16 @@ export default function SongDetail() {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (duration > 0) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const percentage = clickX / rect.width;
+      const newTime = percentage * duration;
+      seekTo(newTime);
+    }
   };
 
   // Minimal/Centered View
@@ -266,7 +277,10 @@ export default function SongDetail() {
 
           {/* Progress Bar - Centered */}
           <div className="w-full max-w-[600px] mb-2">
-            <div className="h-1 bg-gray-700 rounded-full">
+            <div 
+              className="h-1 bg-gray-700 rounded-full cursor-pointer"
+              onClick={handleProgressClick}
+            >
               <div
                 className="h-full bg-white rounded-full transition-all"
                 style={{ width: `${progress}%` }}
@@ -409,7 +423,10 @@ export default function SongDetail() {
 
         {/* Progress Bar */}
         <div className="mb-4">
-          <div className="h-1 bg-gray-800 rounded-full">
+          <div 
+            className="h-1 bg-gray-800 rounded-full cursor-pointer"
+            onClick={handleProgressClick}
+          >
             <div
               className="h-full bg-yellow-500 rounded-full transition-all"
               style={{ width: `${progress}%` }}
