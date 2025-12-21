@@ -1,6 +1,9 @@
-import { use, useMemo } from 'react';
+import { use } from 'react';
 import { serviceContainer } from '../core/di/ServiceContainer';
 import type { Playlist } from '../types';
+
+// Cache empty promise for invalid users to avoid creating new promises
+const EMPTY_PLAYLISTS_PROMISE = Promise.resolve([] as Playlist[]);
 
 /**
  * Safe version of usePlaylists that returns empty array if userId is invalid
@@ -8,15 +11,10 @@ import type { Playlist } from '../types';
  * Leverages React Cache through repository pattern
  */
 export function usePlaylistsSafe(userId: string | null): Playlist[] {
-  // Always call use() unconditionally, but use a cached promise for invalid users
-  const playlistsPromise = useMemo(() => {
-    if (!userId || userId === 'guest') {
-      // Return a cached empty promise for invalid users
-      return Promise.resolve([] as Playlist[]);
-    }
-    // React Cache in the repository will handle deduplication for real users
-    return serviceContainer.playlistsRepository.getPlaylists(userId);
-  }, [userId]);
+  // Always call use() unconditionally - React Cache will handle deduplication
+  const playlistsPromise = !userId || userId === 'guest'
+    ? EMPTY_PLAYLISTS_PROMISE
+    : serviceContainer.playlistsRepository.getPlaylists(userId);
   
   return use(playlistsPromise);
 }

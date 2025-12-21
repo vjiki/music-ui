@@ -1,6 +1,9 @@
-import { use, useMemo } from 'react';
+import { use } from 'react';
 import { serviceContainer } from '../core/di/ServiceContainer';
 import type { Story } from '../types';
+
+// Cache empty promise for invalid users to avoid creating new promises
+const EMPTY_STORIES_PROMISE = Promise.resolve([] as Story[]);
 
 /**
  * Safe version of useStories that returns empty array if userId is invalid
@@ -8,15 +11,10 @@ import type { Story } from '../types';
  * Leverages React Cache through repository pattern
  */
 export function useStoriesSafe(userId: string | null): Story[] {
-  // Always call use() unconditionally, but use a cached promise for invalid users
-  const storiesPromise = useMemo(() => {
-    if (!userId || userId === 'guest') {
-      // Return a cached empty promise for invalid users
-      return Promise.resolve([] as Story[]);
-    }
-    // React Cache in the repository will handle deduplication for real users
-    return serviceContainer.storiesRepository.getStories(userId);
-  }, [userId]);
+  // Always call use() unconditionally - React Cache will handle deduplication
+  const storiesPromise = !userId || userId === 'guest'
+    ? EMPTY_STORIES_PROMISE
+    : serviceContainer.storiesRepository.getStories(userId);
   
   return use(storiesPromise);
 }

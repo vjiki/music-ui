@@ -1,3 +1,5 @@
+import SafeImage from './SafeImage';
+
 interface StoryCircleProps {
   userName: string;
   profileImageURL?: string;
@@ -37,10 +39,15 @@ export default function StoryCircle({
           >
             <div className="w-full h-full rounded-full bg-black overflow-hidden">
               {profileImageURL ? (
-                <img
+                <SafeImage
                   src={profileImageURL}
                   alt={userName}
                   className="w-full h-full object-cover"
+                  fallback={
+                    <div className="w-full h-full bg-white bg-opacity-10 flex items-center justify-center">
+                      <span className="text-2xl">👤</span>
+                    </div>
+                  }
                 />
               ) : (
                 <div className="w-full h-full bg-white bg-opacity-10 flex items-center justify-center">

@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePlayer } from '../contexts/PlayerContext';
@@ -7,19 +7,23 @@ import { List } from 'lucide-react';
 import SuspenseFallback from '../components/SuspenseFallback';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import LoginView from '../components/LoginView';
+import SafeImage from '../components/SafeImage';
 
 function ProfileContent() {
   const navigate = useNavigate();
   const { currentUserId, user, isAuthenticated } = useAuth();
   const { playSong, librarySongs, setLibrarySongs } = usePlayer();
   const [showLogin, setShowLogin] = useState(false);
+  const lastSongsRef = useRef<string>('');
   
   // Use React 19's use() hook with cached repositories
   const songs = useSongs(currentUserId);
   
-  // Update player context with songs when they load
+  // Update player context with songs when they load (only if different)
   useEffect(() => {
-    if (songs.length > 0) {
+    const songsKey = songs.map(s => s.id).join(',');
+    if (songs.length > 0 && lastSongsRef.current !== songsKey) {
+      lastSongsRef.current = songsKey;
       setLibrarySongs(songs);
     }
   }, [songs, setLibrarySongs]);
@@ -104,10 +108,15 @@ function ProfileContent() {
       {/* Profile Header */}
       <div className="flex flex-col items-center gap-4 mb-6 py-8">
         {user?.avatarUrl ? (
-          <img
+          <SafeImage
             src={user.avatarUrl}
             alt={displayName}
             className="w-20 h-20 rounded-full object-cover border-2 border-white border-opacity-20"
+            fallback={
+              <div className="w-20 h-20 rounded-full bg-white bg-opacity-10 flex items-center justify-center">
+                <span className="text-4xl">👤</span>
+              </div>
+            }
           />
         ) : (
           <div className="w-20 h-20 rounded-full bg-white bg-opacity-10 flex items-center justify-center">
@@ -140,12 +149,21 @@ function ProfileContent() {
                 onClick={() => playSong(song, likedSongs)}
                 className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white hover:bg-opacity-5 transition-colors"
               >
-                {song.cover && (
-                  <img
+                {song.cover ? (
+                  <SafeImage
                     src={song.cover}
                     alt={song.title}
                     className="w-12 h-12 rounded-lg object-cover"
+                    fallback={
+                      <div className="w-12 h-12 rounded-lg bg-white bg-opacity-10 flex items-center justify-center">
+                        <span className="text-xs">🎵</span>
+                      </div>
+                    }
                   />
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-white bg-opacity-10 flex items-center justify-center">
+                    <span className="text-xs">🎵</span>
+                  </div>
                 )}
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-medium text-white truncate">{song.title}</p>

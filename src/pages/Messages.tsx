@@ -6,6 +6,7 @@ import SuspenseFallback from '../components/SuspenseFallback';
 import type { ChatListItem, Follower } from '../types';
 import { Search, ChevronLeft, SquarePen, Camera, RefreshCw } from 'lucide-react';
 import ChatView from '../components/ChatView';
+import SafeImage from '../components/SafeImage';
 
 function MessagesContent() {
   const { currentUserId, user, isAuthenticated } = useAuth();
@@ -174,10 +175,15 @@ function MessagesContent() {
                 >
                   <div className="relative">
                     {follower.followerAvatarUrl ? (
-                      <img
+                      <SafeImage
                         src={follower.followerAvatarUrl}
                         alt={follower.followerNickname}
                         className="w-16 h-16 rounded-full object-cover"
+                        fallback={
+                          <div className="w-16 h-16 rounded-full bg-white bg-opacity-10 flex items-center justify-center">
+                            <span className="text-2xl">👤</span>
+                          </div>
+                        }
                       />
                     ) : (
                       <div className="w-16 h-16 rounded-full bg-white bg-opacity-10 flex items-center justify-center">
@@ -230,10 +236,15 @@ function MessagesContent() {
                   className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-white hover:bg-opacity-5 transition-colors"
                 >
                   {chatAvatar ? (
-                    <img
+                    <SafeImage
                       src={chatAvatar}
                       alt={chatTitle}
                       className="w-14 h-14 rounded-full object-cover"
+                      fallback={
+                        <div className="w-14 h-14 rounded-full bg-white bg-opacity-10 flex items-center justify-center">
+                          <span className="text-xl">👤</span>
+                        </div>
+                      }
                     />
                   ) : (
                     <div className="w-14 h-14 rounded-full bg-white bg-opacity-10 flex items-center justify-center">

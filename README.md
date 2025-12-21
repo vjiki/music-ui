@@ -120,12 +120,7 @@ cd music-ui  # if you're in the parent directory
 npm install
 ```
 
-2. Create a `.env` file (optional, defaults to production backend):
-```env
-VITE_API_BASE_URL=https://music-back-g2u6.onrender.com
-```
-
-3. Start the development server:
+2. Start the development server:
 ```bash
 npm run dev
 ```
@@ -142,6 +137,57 @@ npm run build
 
 The built files will be in the `dist` directory.
 
+## Testing
+
+The project includes comprehensive tests to prevent API flooding issues. Run tests with:
+
+```bash
+npm test
+```
+
+### Test Coverage
+
+The test suite includes:
+
+1. **Service Layer Tests** (`src/services/__tests__/`)
+   - Request deduplication tests
+   - Verifies that multiple simultaneous requests for the same userId only make one API call
+   - Tests error handling and cache clearing
+
+2. **Hook Tests** (`src/hooks/__tests__/`)
+   - React Cache deduplication
+   - Guest user handling
+   - Multiple userId scenarios
+
+3. **Component Tests** (`src/pages/__tests__/`)
+   - Prevents infinite re-render loops
+   - Verifies no API flooding on component mount
+   - Tests rapid re-render scenarios
+
+4. **Integration Tests** (`src/__tests__/api-flooding.test.ts`)
+   - **Critical test**: Simulates 30,000 requests to the same endpoint
+   - Verifies only ONE API call is made despite thousands of requests
+   - Tests rapid-fire and concurrent request scenarios
+
+### Running Specific Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm test -- --watch
+
+# Run tests with UI
+npm run test:ui
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run specific test file
+npm test -- api-flooding.test.ts
+```
+
 ## Deployment to Vercel
 
 1. Push your code to a Git repository (GitHub, GitLab, etc.)
@@ -153,7 +199,7 @@ The built files will be in the `dist` directory.
    - Vercel will automatically detect Vite and configure the build settings
 
 3. (Optional) Set environment variables:
-   - In your Vercel project settings, add `VITE_API_BASE_URL` if you need a different backend URL
+   - The API URL is hardcoded to `https://music-back-g2u6.onrender.com` in all service files
 
 4. Deploy:
    - Vercel will automatically deploy on every push to your main branch

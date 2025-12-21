@@ -1,5 +1,6 @@
 import { usePlayer } from '../contexts/PlayerContext';
 import { Play, Pause } from 'lucide-react';
+import SafeImage from './SafeImage';
 
 export default function Player() {
   const {
@@ -14,12 +15,21 @@ export default function Player() {
     <div className="h-16 bg-bird-dark rounded-lg px-4 flex items-center gap-3 mb-2">
       {/* Song Info */}
       <div className="flex items-center gap-2 flex-1 min-w-0">
-        {currentSong.cover && (
-          <img
+        {currentSong.cover ? (
+          <SafeImage
             src={currentSong.cover}
             alt={currentSong.title}
             className="w-12 h-12 rounded object-cover"
+            fallback={
+              <div className="w-12 h-12 rounded bg-white bg-opacity-10 flex items-center justify-center">
+                <span className="text-sm">🎵</span>
+              </div>
+            }
           />
+        ) : (
+          <div className="w-12 h-12 rounded bg-white bg-opacity-10 flex items-center justify-center">
+            <span className="text-sm">🎵</span>
+          </div>
         )}
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium truncate">{currentSong.title}</p>

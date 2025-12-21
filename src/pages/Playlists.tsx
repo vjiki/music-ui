@@ -1,11 +1,12 @@
-import { Suspense } from 'react';
+import { Suspense, useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import { usePlaylistsSafe } from '../hooks/usePlaylistsSafe';
-import { usePlaylistWithSongs } from '../hooks/usePlaylistWithSongs';
+import { serviceContainer } from '../core/di/ServiceContainer';
 import { Music } from 'lucide-react';
 import SuspenseFallback from '../components/SuspenseFallback';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import SafeImage from '../components/SafeImage';
 
 function PlaylistCard({ name, description, cover, onPlay }: {
   name: string;
@@ -19,10 +20,15 @@ function PlaylistCard({ name, description, cover, onPlay }: {
       className="flex flex-col gap-3 p-4 bg-white bg-opacity-5 rounded-2xl hover:bg-opacity-10 transition-colors"
     >
       {cover ? (
-        <img
+        <SafeImage
           src={cover}
           alt={name}
           className="w-full aspect-square rounded-xl object-cover"
+          fallback={
+            <div className="w-full aspect-square rounded-xl bg-white bg-opacity-10 flex items-center justify-center">
+              <Music size={48} className="text-gray-400" />
+            </div>
+          }
         />
       ) : (
         <div className="w-full aspect-square rounded-xl bg-white bg-opacity-10 flex items-center justify-center">
@@ -48,10 +54,35 @@ function PlaylistItem({ playlistId, name, description, cover }: {
   cover?: string;
 }) {
   const { playSong } = usePlayer();
-  const playlistWithSongs = usePlaylistWithSongs(playlistId);
+  const [playlistWithSongs, setPlaylistWithSongs] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const loadingRef = useRef(false); // Additional guard to prevent rapid clicks
 
-  const handleClick = () => {
-    if (playlistWithSongs.songs.length > 0) {
+  const handleClick = async () => {
+    // Prevent rapid clicks from causing flooding
+    if (loadingRef.current) {
+      return;
+    }
+
+    if (!playlistWithSongs && !isLoading) {
+      loadingRef.current = true;
+      setIsLoading(true);
+      try {
+        // Lazy load playlist songs only when clicked
+        // Service layer result cache will prevent duplicate requests
+        const playlist = await serviceContainer.playlistsRepository.getPlaylistWithSongs(playlistId);
+        setPlaylistWithSongs(playlist);
+        if (playlist.songs.length > 0) {
+          playSong(playlist.songs[0], playlist.songs);
+        }
+      } catch (error) {
+        console.error('Failed to load playlist:', error);
+      } finally {
+        setIsLoading(false);
+        loadingRef.current = false;
+      }
+    } else if (playlistWithSongs?.songs.length > 0) {
+      // If already loaded, just play
       playSong(playlistWithSongs.songs[0], playlistWithSongs.songs);
     }
   };
@@ -70,6 +101,7 @@ function PlaylistsContent() {
   const { currentUserId, isAuthenticated } = useAuth();
   
   // Use React 19's use() hook with cached repositories
+  // Service layer deduplication will prevent flooding even if this re-renders
   const playlists = usePlaylistsSafe(isAuthenticated ? currentUserId : null);
 
   return (
@@ -88,14 +120,13 @@ function PlaylistsContent() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {playlists.map((playlist) => (
-              <Suspense key={playlist.id} fallback={<PlaylistCard name={playlist.name} description={playlist.description} cover={playlist.cover} onPlay={() => {}} />}>
-                <PlaylistItem
-                  playlistId={playlist.id}
-                  name={playlist.name}
-                  description={playlist.description}
-                  cover={playlist.cover}
-                />
-              </Suspense>
+              <PlaylistItem
+                key={playlist.id}
+                playlistId={playlist.id}
+                name={playlist.name}
+                description={playlist.description}
+                cover={playlist.cover}
+              />
             ))}
           </div>
         )}

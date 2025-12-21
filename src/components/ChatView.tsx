@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { serviceContainer } from '../core/di/ServiceContainer';
 import type { ChatListItem, Message } from '../types';
 import { ChevronLeft, Camera, Video, Mic, Send } from 'lucide-react';
+import SafeImage from './SafeImage';
 
 interface ChatViewProps {
   chat: ChatListItem;
@@ -70,7 +71,12 @@ export default function ChatView({ chat, onClose }: ChatViewProps) {
             <ChevronLeft size={20} className="text-white" />
           </button>
           {chatAvatar && (
-            <img src={chatAvatar} alt={chatTitle} className="w-8 h-8 rounded-full object-cover" />
+            <SafeImage
+              src={chatAvatar}
+              alt={chatTitle}
+              className="w-8 h-8 rounded-full object-cover"
+              fallback={<span className="text-sm">👤</span>}
+            />
           )}
           <h1 className="text-lg font-semibold flex-1">{chatTitle}</h1>
           <button className="p-2 rounded hover:bg-white hover:bg-opacity-10">
@@ -101,10 +107,11 @@ export default function ChatView({ chat, onClose }: ChatViewProps) {
                   {!isCurrentUser && (
                     <div className="w-8 h-8 rounded-full bg-white bg-opacity-10 flex items-center justify-center flex-shrink-0">
                       {message.senderAvatarUrl ? (
-                        <img
+                        <SafeImage
                           src={message.senderAvatarUrl}
                           alt={message.senderNickname || 'User'}
                           className="w-8 h-8 rounded-full object-cover"
+                          fallback={<span className="text-sm">👤</span>}
                         />
                       ) : (
                         <span className="text-sm">👤</span>

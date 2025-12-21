@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useRef, useEffect, useCallback, ReactNode } from 'react';
 import type { Song } from '../types';
+import { transformAudioUrl } from '../utils/urlUtils';
 
 interface PlayerContextType {
   currentSong: Song | null;
@@ -36,6 +37,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [isDisliked, setIsDisliked] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Memoize setLibrarySongs to prevent infinite re-renders
+  const setLibrarySongsMemoized = useCallback((songs: Song[]) => {
+    setLibrarySongs(songs);
+  }, []);
+
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -50,8 +56,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             const currentIndex = prevQueue.findIndex((s) => s.id === prevSong.id);
             const nextIndex = (currentIndex + 1) % prevQueue.length;
             const nextSong = prevQueue[nextIndex];
-            if (audioRef.current && nextSong) {
-              audioRef.current.src = nextSong.audio_url;
+            if (audioRef.current && nextSong && nextSong.audio_url) {
+              const transformedUrl = transformAudioUrl(nextSong.audio_url);
+              audioRef.current.src = transformedUrl;
+              audioRef.current.crossOrigin = 'anonymous';
               audioRef.current.load();
               audioRef.current.play().catch((error) => {
                 console.error('Error playing next song:', error);
@@ -90,22 +98,42 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (newQueue) {
       setQueue(newQueue);
     }
-    if (audioRef.current) {
-      audioRef.current.src = song.audio_url;
+    if (audioRef.current && song.audio_url) {
+      // Transform Google Drive URLs to ensure they work
+      const transformedUrl = transformAudioUrl(song.audio_url);
+      audioRef.current.src = transformedUrl;
+      audioRef.current.crossOrigin = 'anonymous'; // Allow CORS for audio
       audioRef.current.load();
       audioRef.current.play().catch((error) => {
         console.error('Error playing audio:', error);
+        console.error('Audio URL:', transformedUrl);
         setIsPlaying(false);
+        // Try alternative URL format if first attempt fails
+        const audio = audioRef.current;
+        if (audio && transformedUrl.includes('drive.google.com') && transformedUrl.includes('export=view')) {
+          // Try download format as fallback
+          const idMatch = transformedUrl.match(/id=([a-zA-Z0-9_-]+)/);
+          if (idMatch) {
+            const fileId = idMatch[1];
+            const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+            audio.src = downloadUrl;
+            audio.load();
+            audio.play().catch((fallbackError) => {
+              console.error('Fallback audio URL also failed:', fallbackError);
+            });
+          }
+        }
       });
     }
   }, []);
 
   const togglePlayPause = () => {
-    if (audioRef.current) {
+    const audio = audioRef.current;
+    if (audio) {
       if (isPlaying) {
-        audioRef.current.pause();
+        audio.pause();
       } else {
-        audioRef.current.play().catch((error) => {
+        audio.play().catch((error) => {
           console.error('Error playing audio:', error);
         });
       }
@@ -164,7 +192,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         isDisliked,
         toggleLike,
         toggleDislike,
-        setLibrarySongs,
+        setLibrarySongs: setLibrarySongsMemoized,
       }}
     >
       {children}

@@ -1,22 +1,26 @@
-import { useState, useMemo, Suspense, useEffect } from 'react';
+import { useState, useMemo, Suspense, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useSongs } from '../hooks/useSongs';
 import { Search as SearchIcon } from 'lucide-react';
 import SuspenseFallback from '../components/SuspenseFallback';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import SafeImage from '../components/SafeImage';
 
 function SearchContent() {
   const { currentUserId } = useAuth();
   const { playSong, setLibrarySongs } = usePlayer();
   const [searchQuery, setSearchQuery] = useState('');
+  const lastSongsRef = useRef<string>('');
   
   // Use React 19's use() hook with cached repositories
   const librarySongs = useSongs(currentUserId);
   
-  // Update player context with songs when they load
+  // Update player context with songs when they load (only if different)
   useEffect(() => {
-    if (librarySongs.length > 0) {
+    const songsKey = librarySongs.map(s => s.id).join(',');
+    if (librarySongs.length > 0 && lastSongsRef.current !== songsKey) {
+      lastSongsRef.current = songsKey;
       setLibrarySongs(librarySongs);
     }
   }, [librarySongs, setLibrarySongs]);
@@ -66,12 +70,21 @@ function SearchContent() {
                 onClick={() => playSong(song, filteredSongs)}
                 className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-white hover:bg-opacity-5 transition-colors"
               >
-                {song.cover && (
-                  <img
+                {song.cover ? (
+                  <SafeImage
                     src={song.cover}
                     alt={song.title}
                     className="w-14 h-14 rounded object-cover"
+                    fallback={
+                      <div className="w-14 h-14 rounded bg-white bg-opacity-10 flex items-center justify-center">
+                        <span className="text-xs">🎵</span>
+                      </div>
+                    }
                   />
+                ) : (
+                  <div className="w-14 h-14 rounded bg-white bg-opacity-10 flex items-center justify-center">
+                    <span className="text-xs">🎵</span>
+                  </div>
                 )}
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-medium truncate">{song.title}</p>

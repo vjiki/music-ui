@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useSongs } from '../hooks/useSongs';
@@ -8,18 +8,22 @@ import StoryCircle from '../components/StoryCircle';
 import SongCard from '../components/SongCard';
 import SuspenseFallback from '../components/SuspenseFallback';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import SafeImage from '../components/SafeImage';
 
 function HomeContent() {
   const { currentUserId, isAuthenticated } = useAuth();
   const { playSong, setLibrarySongs } = usePlayer();
+  const lastSongsRef = useRef<string>('');
   
   // Use React 19's use() hook with cached repositories
   const librarySongs = useSongs(currentUserId);
   const stories = useStoriesSafe(isAuthenticated ? currentUserId : null);
 
-  // Update player context with songs when they load
+  // Update player context with songs when they load (only if different)
   useEffect(() => {
-    if (librarySongs.length > 0) {
+    const songsKey = librarySongs.map(s => s.id).join(',');
+    if (librarySongs.length > 0 && lastSongsRef.current !== songsKey) {
+      lastSongsRef.current = songsKey;
       setLibrarySongs(librarySongs);
     }
   }, [librarySongs, setLibrarySongs]);
@@ -110,12 +114,21 @@ function HomeContent() {
                 onClick={() => playSong(song, librarySongs)}
                 className="flex items-center gap-3.5 px-4.5 py-3.5 bg-white bg-opacity-[0.08] rounded-[22px] hover:bg-opacity-10 transition-colors min-w-fit"
               >
-                {song.cover && (
-                  <img
+                {song.cover ? (
+                  <SafeImage
                     src={song.cover}
                     alt={song.title}
                     className="w-[60px] h-[60px] rounded-xl object-cover"
+                    fallback={
+                      <div className="w-[60px] h-[60px] rounded-xl bg-white bg-opacity-10 flex items-center justify-center">
+                        <span className="text-xs">🎵</span>
+                      </div>
+                    }
                   />
+                ) : (
+                  <div className="w-[60px] h-[60px] rounded-xl bg-white bg-opacity-10 flex items-center justify-center">
+                    <span className="text-xs">🎵</span>
+                  </div>
                 )}
                 <div className="text-left">
                   <p className="text-base font-medium">{song.title}</p>

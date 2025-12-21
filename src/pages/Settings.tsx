@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import SafeImage from '../components/SafeImage';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -207,10 +208,15 @@ export default function Settings() {
             <>
               <div className="px-4 py-3 flex items-center gap-3">
                 {user.avatarUrl ? (
-                  <img
+                  <SafeImage
                     src={user.avatarUrl}
                     alt={user.nickname || user.email}
                     className="w-10 h-10 rounded-full object-cover"
+                    fallback={
+                      <div className="w-10 h-10 rounded-full bg-white bg-opacity-10 flex items-center justify-center">
+                        <span className="text-lg">👤</span>
+                      </div>
+                    }
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-white bg-opacity-10 flex items-center justify-center">

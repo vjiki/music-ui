@@ -1,6 +1,9 @@
-import { use, useMemo } from 'react';
+import { use } from 'react';
 import { serviceContainer } from '../core/di/ServiceContainer';
 import type { Song } from '../types';
+
+// Cache empty promise for guest users to avoid creating new promises
+const EMPTY_SONGS_PROMISE = Promise.resolve([] as Song[]);
 
 /**
  * Custom hook for fetching songs
@@ -9,15 +12,10 @@ import type { Song } from '../types';
  * Skips API calls for guest users
  */
 export function useSongs(userId: string): Song[] {
-  // Always call use() unconditionally, but use a cached promise for guest users
-  const songsPromise = useMemo(() => {
-    if (userId === 'guest' || !userId) {
-      // Return a cached empty promise for guest users
-      return Promise.resolve([] as Song[]);
-    }
-    // React Cache in the repository will handle deduplication for real users
-    return serviceContainer.songsRepository.getSongs(userId);
-  }, [userId]);
+  // Always call use() unconditionally - React Cache will handle deduplication
+  const songsPromise = userId === 'guest' || !userId
+    ? EMPTY_SONGS_PROMISE
+    : serviceContainer.songsRepository.getSongs(userId);
   
   return use(songsPromise);
 }
