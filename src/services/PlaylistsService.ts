@@ -20,7 +20,7 @@ const pendingPlaylistWithSongsRequests = new Map<string, Promise<PlaylistWithSon
 // Result cache - stores resolved results temporarily to prevent rapid re-requests
 const playlistsResultCache = new Map<string, { data: Playlist[]; timestamp: number }>();
 const playlistWithSongsResultCache = new Map<string, { data: PlaylistWithSongs; timestamp: number }>();
-const CACHE_TTL = 5000; // 5 second cache TTL to prevent rapid re-requests after successful fetch
+const CACHE_TTL = 60000; // 60 second cache TTL to prevent rapid re-requests after successful fetch
 
 // Track request counts for debugging (can be removed in production)
 if (typeof window !== 'undefined' && (window as any).__DEV__) {

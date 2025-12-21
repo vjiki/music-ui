@@ -1,4 +1,4 @@
-import { use } from 'react';
+import { use, useMemo } from 'react';
 import { serviceContainer } from '../core/di/ServiceContainer';
 import type { Story } from '../types';
 
@@ -9,12 +9,18 @@ const EMPTY_STORIES_PROMISE = Promise.resolve([] as Story[]);
  * Safe version of useStories that returns empty array if userId is invalid
  * Uses React 19's use() hook for promise handling
  * Leverages React Cache through repository pattern
+ * 
+ * IMPORTANT: The promise must be memoized to prevent React from re-suspending
  */
 export function useStoriesSafe(userId: string | null): Story[] {
-  // Always call use() unconditionally - React Cache will handle deduplication
-  const storiesPromise = !userId || userId === 'guest'
-    ? EMPTY_STORIES_PROMISE
-    : serviceContainer.storiesRepository.getStories(userId);
+  // Memoize the promise to ensure stable reference across renders
+  const storiesPromise = useMemo(() => {
+    if (!userId || userId === 'guest') {
+      return EMPTY_STORIES_PROMISE;
+    }
+    // React Cache in repository ensures same promise for same userId
+    return serviceContainer.storiesRepository.getStories(userId);
+  }, [userId]);
   
   return use(storiesPromise);
 }

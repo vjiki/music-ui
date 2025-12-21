@@ -9,7 +9,12 @@ interface SongCardProps {
 export default function SongCard({ song, onClick }: SongCardProps) {
   return (
     <button
-      onClick={onClick}
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      }}
       className="flex flex-col gap-3 min-w-[180px] p-4 bg-white bg-opacity-5 rounded-3xl hover:bg-opacity-10 transition-colors"
     >
       {song.cover ? (

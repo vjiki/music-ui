@@ -14,28 +14,38 @@ function HomeContent() {
   const { currentUserId, isAuthenticated } = useAuth();
   const { playSong, setLibrarySongs } = usePlayer();
   const lastSongsRef = useRef<string>('');
+  const lastUserIdRef = useRef<string>('');
   
   // Use React 19's use() hook with cached repositories
+  // Only fetch if userId actually changed to prevent unnecessary re-renders
   const librarySongs = useSongs(currentUserId);
   const stories = useStoriesSafe(isAuthenticated ? currentUserId : null);
 
   // Update player context with songs when they load (only if different)
+  // Also check if userId changed to prevent unnecessary updates
   useEffect(() => {
+    if (lastUserIdRef.current !== currentUserId) {
+      lastUserIdRef.current = currentUserId;
+      lastSongsRef.current = ''; // Reset songs ref when user changes
+    }
+    
     const songsKey = librarySongs.map(s => s.id).join(',');
     if (librarySongs.length > 0 && lastSongsRef.current !== songsKey) {
       lastSongsRef.current = songsKey;
       setLibrarySongs(librarySongs);
     }
-  }, [librarySongs, setLibrarySongs]);
+  }, [librarySongs, setLibrarySongs, currentUserId]);
 
-  const handlePlayMyVibe = () => {
+  const handlePlayMyVibe = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     if (librarySongs.length > 0) {
       playSong(librarySongs[0], librarySongs);
     }
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-black">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden bg-black">
       {/* Top Bar */}
       <div className="sticky top-0 z-10 bg-black border-b border-gray-900 px-4 py-3">
         <div className="flex items-center justify-between">
@@ -54,7 +64,7 @@ function HomeContent() {
         </div>
 
         {/* Stories */}
-        <div className="mt-4 flex gap-4 overflow-x-auto pb-2 px-4">
+        <div className="mt-4 flex gap-4 overflow-x-auto overflow-y-hidden pb-2 px-4 scrollbar-hide">
           <StoryCircle
             isCreate
             userName="Your story"
@@ -107,11 +117,16 @@ function HomeContent() {
             <h2 className="text-xl font-bold">Quick Play</h2>
             <button className="text-xs text-gray-400 hover:text-white">See all</button>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-2 scrollbar-hide">
             {librarySongs.slice(0, 10).map((song) => (
               <button
                 key={song.id}
-                onClick={() => playSong(song, librarySongs)}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  playSong(song, librarySongs);
+                }}
                 className="flex items-center gap-3.5 px-4.5 py-3.5 bg-white bg-opacity-[0.08] rounded-[22px] hover:bg-opacity-10 transition-colors min-w-fit"
               >
                 {song.cover ? (
@@ -146,13 +161,14 @@ function HomeContent() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Mixes</h2>
             <button
+              type="button"
               onClick={handlePlayMyVibe}
               className="p-2 rounded-full bg-gradient-to-br from-pink-500 to-orange-500 text-white"
             >
               <Play size={20} fill="currentColor" />
             </button>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-2 scrollbar-hide">
             {librarySongs.map((song) => (
               <SongCard
                 key={song.id}

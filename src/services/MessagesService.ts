@@ -16,7 +16,7 @@ const api = axios.create({
 const pendingMessagesRequests = new Map<string, Promise<Message[]>>();
 // Result cache - stores resolved results temporarily to prevent rapid re-requests
 const messagesResultCache = new Map<string, { data: Message[]; timestamp: number }>();
-const CACHE_TTL = 5000; // 5 second cache TTL to prevent rapid re-requests after successful fetch
+const CACHE_TTL = 60000; // 60 second cache TTL to prevent rapid re-requests after successful fetch
 
 /**
  * Helper to create cache key for messages requests

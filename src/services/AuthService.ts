@@ -15,7 +15,7 @@ const api = axios.create({
 const pendingGetUserRequests = new Map<string, Promise<User>>();
 // Result cache - stores resolved results temporarily to prevent rapid re-requests
 const getUserResultCache = new Map<string, { data: User; timestamp: number }>();
-const CACHE_TTL = 5000; // 5 second cache TTL to prevent rapid re-requests after successful fetch
+const CACHE_TTL = 60000; // 60 second cache TTL to prevent rapid re-requests after successful fetch
 
 /**
  * Concrete implementation of IAuthService

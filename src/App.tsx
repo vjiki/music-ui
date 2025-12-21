@@ -9,6 +9,7 @@ import Playlists from './pages/Playlists';
 import Messages from './pages/Messages';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
+import SongDetail from './pages/SongDetail';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
                 <Route path="/messages" element={<Messages />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/song/:songId" element={<SongDetail />} />
               </Routes>
             </Layout>
           </Router>

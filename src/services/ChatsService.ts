@@ -15,7 +15,7 @@ const api = axios.create({
 const pendingChatsRequests = new Map<string, Promise<ChatListItem[]>>();
 // Result cache - stores resolved results temporarily to prevent rapid re-requests
 const chatsResultCache = new Map<string, { data: ChatListItem[]; timestamp: number }>();
-const CACHE_TTL = 5000; // 5 second cache TTL to prevent rapid re-requests after successful fetch
+const CACHE_TTL = 60000; // 60 second cache TTL to prevent rapid re-requests after successful fetch
 
 /**
  * Concrete implementation of IChatsService

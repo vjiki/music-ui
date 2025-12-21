@@ -17,14 +17,18 @@ function SearchContent() {
   const librarySongs = useSongs(currentUserId);
   
   // Update player context with songs when they load (only if different)
+  // Use a ref to track if we've already set these songs to prevent infinite loops
   useEffect(() => {
+    // Only update if songs actually changed (by ID comparison)
     const songsKey = librarySongs.map(s => s.id).join(',');
     if (librarySongs.length > 0 && lastSongsRef.current !== songsKey) {
       lastSongsRef.current = songsKey;
+      // setLibrarySongs already has its own deduplication, but we add an extra layer here
       setLibrarySongs(librarySongs);
     }
   }, [librarySongs, setLibrarySongs]);
 
+  // Memoize filtered songs to ensure stable reference when search query doesn't change
   const filteredSongs = useMemo(() => {
     if (!searchQuery.trim()) return librarySongs;
     const query = searchQuery.toLowerCase();
@@ -67,7 +71,13 @@ function SearchContent() {
             {filteredSongs.map((song) => (
               <button
                 key={song.id}
-                onClick={() => playSong(song, filteredSongs)}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  // Use filteredSongs directly - it's already memoized
+                  playSong(song, filteredSongs);
+                }}
                 className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-white hover:bg-opacity-5 transition-colors"
               >
                 {song.cover ? (

@@ -17,7 +17,12 @@ export default function StoryCircle({
 }: StoryCircleProps) {
   return (
     <button
-      onClick={onClick}
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      }}
       className="flex flex-col items-center gap-2 min-w-[70px]"
     >
       <div className="relative">

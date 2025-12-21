@@ -143,12 +143,17 @@ function ProfileContent() {
           <p className="text-gray-400 text-sm py-5">No liked songs yet</p>
         ) : (
           <div className="space-y-4">
-            {likedSongs.slice(0, 5).map((song) => (
-              <button
-                key={song.id}
-                onClick={() => playSong(song, likedSongs)}
-                className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white hover:bg-opacity-5 transition-colors"
-              >
+                   {likedSongs.slice(0, 5).map((song) => (
+                     <button
+                       key={song.id}
+                       type="button"
+                       onClick={(e) => {
+                         e.preventDefault();
+                         e.stopPropagation();
+                         playSong(song, likedSongs);
+                       }}
+                       className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white hover:bg-opacity-5 transition-colors"
+                     >
                 {song.cover ? (
                   <SafeImage
                     src={song.cover}

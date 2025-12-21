@@ -15,7 +15,7 @@ const api = axios.create({
 const pendingFollowersRequests = new Map<string, Promise<Follower[]>>();
 // Result cache - stores resolved results temporarily to prevent rapid re-requests
 const followersResultCache = new Map<string, { data: Follower[]; timestamp: number }>();
-const CACHE_TTL = 5000; // 5 second cache TTL to prevent rapid re-requests after successful fetch
+const CACHE_TTL = 60000; // 60 second cache TTL to prevent rapid re-requests after successful fetch
 
 /**
  * Concrete implementation of IFollowersService

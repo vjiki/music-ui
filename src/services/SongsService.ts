@@ -14,9 +14,9 @@ const api = axios.create({
 // Request deduplication cache - prevents multiple simultaneous requests for the same userId
 // Module-level cache persists across all service instances
 const pendingRequests = new Map<string, Promise<Song[]>>();
-// Result cache - stores resolved results temporarily to prevent rapid re-requests
-const resultCache = new Map<string, { data: Song[]; timestamp: number }>();
-const CACHE_TTL = 5000; // 5 second cache TTL to prevent rapid re-requests after successful fetch
+// Result cache - stores resolved results and promise references to prevent rapid re-requests
+const resultCache = new Map<string, { data: Song[]; promise: Promise<Song[]>; timestamp: number }>();
+const CACHE_TTL = 60000; // 60 second cache TTL to prevent rapid re-requests after successful fetch
 
 // Track request counts for debugging (can be removed in production)
 if (typeof window !== 'undefined' && (window as any).__DEV__) {
@@ -38,11 +38,12 @@ export class SongsService implements ISongsService {
     if (cachedResult) {
       const age = Date.now() - cachedResult.timestamp;
       if (age < CACHE_TTL) {
-        // Return cached result immediately - no API call needed
+        // Return cached promise reference - maintains promise identity for React Cache
         if (typeof window !== 'undefined' && (window as any).__DEV__) {
           (window as any).__songsResultCacheHits = ((window as any).__songsResultCacheHits || 0) + 1;
         }
-        return Promise.resolve(cachedResult.data);
+        // Return the cached promise (same reference = React Cache deduplication works)
+        return cachedResult.promise;
       } else {
         // Cache expired, remove it
         resultCache.delete(userId);
@@ -70,9 +71,13 @@ export class SongsService implements ISongsService {
     const requestPromise = api.get<Song[]>(`/api/v1/songs/${userId}`)
       .then((response) => {
         const now = Date.now();
-        // Store result in cache IMMEDIATELY (synchronously) before removing from pending
-        // This prevents race conditions where component re-renders before cache is set
-        resultCache.set(userId, { data: response.data, timestamp: now });
+        // Store result AND promise reference in cache IMMEDIATELY (synchronously)
+        // This prevents race conditions and maintains promise identity for React Cache
+        resultCache.set(userId, { 
+          data: response.data, 
+          promise: requestPromise, // Store the promise reference itself
+          timestamp: now 
+        });
         // Remove from pending cache after completion
         pendingRequests.delete(userId);
         // Clean up result cache after TTL expires

@@ -13,9 +13,9 @@ const api = axios.create({
 
 // Request deduplication cache - prevents multiple simultaneous requests
 const pendingStoriesRequests = new Map<string, Promise<Story[]>>();
-// Result cache - stores resolved results temporarily to prevent rapid re-requests
-const storiesResultCache = new Map<string, { data: Story[]; timestamp: number }>();
-const CACHE_TTL = 5000; // 5 second cache TTL to prevent rapid re-requests after successful fetch
+// Result cache - stores resolved results and promise references to prevent rapid re-requests
+const storiesResultCache = new Map<string, { data: Story[]; promise: Promise<Story[]>; timestamp: number }>();
+const CACHE_TTL = 60000; // 60 second cache TTL to prevent rapid re-requests after successful fetch
 
 // Track request counts for debugging (can be removed in production)
 if (typeof window !== 'undefined' && (window as any).__DEV__) {
@@ -32,15 +32,17 @@ if (typeof window !== 'undefined' && (window as any).__DEV__) {
 export class StoriesService implements IStoriesService {
   async getStories(userId: string): Promise<Story[]> {
     // First check result cache (prevents rapid re-requests after successful fetch)
+    // This is checked FIRST to prevent any new requests if we have recent data
     const cachedResult = storiesResultCache.get(userId);
     if (cachedResult) {
       const age = Date.now() - cachedResult.timestamp;
       if (age < CACHE_TTL) {
-        // Return cached result immediately - no API call needed
+        // Return cached promise reference - maintains promise identity for React Cache
         if (typeof window !== 'undefined' && (window as any).__DEV__) {
           (window as any).__storiesResultCacheHits = ((window as any).__storiesResultCacheHits || 0) + 1;
         }
-        return Promise.resolve(cachedResult.data);
+        // Return the cached promise (same reference = React Cache deduplication works)
+        return cachedResult.promise;
       } else {
         // Cache expired, remove it
         storiesResultCache.delete(userId);
@@ -65,8 +67,13 @@ export class StoriesService implements IStoriesService {
     const request = api.get<Story[]>(`/api/v1/stories/user/${userId}`)
       .then((response) => {
         const now = Date.now();
-        // Store result in cache IMMEDIATELY before removing from pending
-        storiesResultCache.set(userId, { data: response.data, timestamp: now });
+        // Store result AND promise reference in cache IMMEDIATELY
+        // This maintains promise identity for React Cache
+        storiesResultCache.set(userId, { 
+          data: response.data, 
+          promise: request, // Store the promise reference itself
+          timestamp: now 
+        });
         // Remove from pending cache after completion
         pendingStoriesRequests.delete(userId);
         // Clean up result cache after TTL expires

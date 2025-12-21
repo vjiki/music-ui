@@ -15,7 +15,7 @@ const api = axios.create({
 const pendingLikeDislikeRequests = new Map<string, Promise<SongLikeResponse>>();
 // Result cache - stores resolved results temporarily to prevent rapid re-requests
 const likeDislikeResultCache = new Map<string, { data: SongLikeResponse; timestamp: number }>();
-const CACHE_TTL = 5000; // 5 second cache TTL to prevent rapid re-requests after successful fetch
+const CACHE_TTL = 60000; // 60 second cache TTL to prevent rapid re-requests after successful fetch
 
 /**
  * Helper to create cache key for like/dislike info requests

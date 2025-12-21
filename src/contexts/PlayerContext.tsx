@@ -25,6 +25,13 @@ interface PlayerContextType {
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
+// Navigation helper - we'll use a ref to avoid issues with hooks in context
+let navigateToSong: ((songId: string) => void) | null = null;
+
+export function setNavigateToSong(navigate: (songId: string) => void) {
+  navigateToSong = navigate;
+}
+
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -38,8 +45,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Memoize setLibrarySongs to prevent infinite re-renders
+  // Use a ref to track the last set songs to prevent unnecessary updates
+  const lastLibrarySongsRef = useRef<string>('');
   const setLibrarySongsMemoized = useCallback((songs: Song[]) => {
-    setLibrarySongs(songs);
+    const songsKey = songs.map(s => s.id).join(',');
+    // Only update if the songs actually changed
+    if (lastLibrarySongsRef.current !== songsKey) {
+      lastLibrarySongsRef.current = songsKey;
+      setLibrarySongs(songs);
+    }
   }, []);
 
 
@@ -94,38 +108,76 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const playSong = useCallback((song: Song, newQueue?: Song[]) => {
-    setCurrentSong(song);
+    // Set song immediately to show player UI (synchronous, no delay)
+    // Use functional updates to prevent unnecessary re-renders if same song
+    const isNewSong = currentSong?.id !== song.id;
+    
+    setCurrentSong((prevSong) => {
+      // Only update if it's actually a different song
+      if (prevSong?.id === song.id) {
+        return prevSong; // Return same reference to prevent re-render
+      }
+      return song;
+    });
     if (newQueue) {
-      setQueue(newQueue);
+      setQueue((prevQueue) => {
+        // Only update if queue actually changed (by comparing IDs)
+        const prevIds = prevQueue.map(s => s.id).join(',');
+        const newIds = newQueue.map(s => s.id).join(',');
+        if (prevIds === newIds && prevQueue.length === newQueue.length) {
+          return prevQueue; // Return same reference to prevent re-render
+        }
+        return newQueue;
+      });
     }
+
+    // Navigate to detailed song detail view when a new song is played (from play button)
+    if (isNewSong && navigateToSong) {
+      navigateToSong(song.id);
+    }
+    
+    // Load and play audio asynchronously (doesn't block UI)
     if (audioRef.current && song.audio_url) {
       // Transform Google Drive URLs to ensure they work
       const transformedUrl = transformAudioUrl(song.audio_url);
-      audioRef.current.src = transformedUrl;
-      audioRef.current.crossOrigin = 'anonymous'; // Allow CORS for audio
-      audioRef.current.load();
-      audioRef.current.play().catch((error) => {
-        console.error('Error playing audio:', error);
-        console.error('Audio URL:', transformedUrl);
-        setIsPlaying(false);
-        // Try alternative URL format if first attempt fails
-        const audio = audioRef.current;
-        if (audio && transformedUrl.includes('drive.google.com') && transformedUrl.includes('export=view')) {
-          // Try download format as fallback
-          const idMatch = transformedUrl.match(/id=([a-zA-Z0-9_-]+)/);
-          if (idMatch) {
-            const fileId = idMatch[1];
-            const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-            audio.src = downloadUrl;
-            audio.load();
-            audio.play().catch((fallbackError) => {
-              console.error('Fallback audio URL also failed:', fallbackError);
-            });
+      const audio = audioRef.current;
+      
+      // Set source and attributes
+      audio.src = transformedUrl;
+      audio.crossOrigin = 'anonymous';
+      
+      // Load audio (this is async but doesn't block UI)
+      audio.load();
+      
+      // Play audio (this is async)
+      audio.play()
+        .then(() => {
+          // Audio started playing successfully
+          setIsPlaying(true);
+        })
+        .catch((error) => {
+          console.error('Error playing audio:', error);
+          console.error('Audio URL:', transformedUrl);
+          setIsPlaying(false);
+          // Try alternative URL format if first attempt fails
+          if (audio && transformedUrl.includes('drive.google.com') && transformedUrl.includes('export=view')) {
+            // Try download format as fallback
+            const idMatch = transformedUrl.match(/id=([a-zA-Z0-9_-]+)/);
+            if (idMatch) {
+              const fileId = idMatch[1];
+              const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+              audio.src = downloadUrl;
+              audio.load();
+              audio.play()
+                .then(() => setIsPlaying(true))
+                .catch((fallbackError) => {
+                  console.error('Fallback audio URL also failed:', fallbackError);
+                });
+            }
           }
-        }
-      });
+        });
     }
-  }, []);
+  }, [currentSong]);
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
