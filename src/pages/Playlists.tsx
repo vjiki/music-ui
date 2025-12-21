@@ -58,7 +58,6 @@ function PlaylistItem({ playlistId, name, description, cover }: {
 
   return (
     <PlaylistCard
-      playlistId={playlistId}
       name={name}
       description={description}
       cover={cover}

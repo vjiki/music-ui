@@ -65,3 +65,50 @@ export interface SongLikeRequest {
   songId: string;
 }
 
+export interface ChatListItem {
+  chatId: string;
+  chatType: string;
+  title?: string;
+  avatarUrl?: string;
+  lastMessagePreview?: string;
+  lastMessageAt?: string;
+  lastMessageSenderId?: string;
+  lastMessageSenderName?: string;
+  unreadCount: number;
+  isMuted: boolean;
+  updatedAt?: string;
+  participants: ParticipantSummary[];
+}
+
+export interface ParticipantSummary {
+  userId: string;
+  userNickname: string;
+  userAvatarUrl?: string;
+}
+
+export interface Message {
+  id: string;
+  chatId: string;
+  senderId?: string;
+  senderEmail?: string;
+  senderNickname?: string;
+  senderAvatarUrl?: string;
+  replyToId?: string;
+  messageType: string;
+  content?: string;
+  songId?: string;
+  attachmentCount: number;
+  isEdited: boolean;
+  isDeleted: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Follower {
+  followerId: string;
+  followerEmail: string;
+  followerNickname: string;
+  followerAvatarUrl?: string;
+  followedAt?: string;
+}
+

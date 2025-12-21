@@ -3,6 +3,9 @@ import { SongsService } from '../../services/SongsService';
 import { PlaylistsService } from '../../services/PlaylistsService';
 import { StoriesService } from '../../services/StoriesService';
 import { SongLikesService } from '../../services/SongLikesService';
+import { ChatsService } from '../../services/ChatsService';
+import { MessagesService } from '../../services/MessagesService';
+import { FollowersService } from '../../services/FollowersService';
 import { AuthRepository } from '../repositories/AuthRepository';
 import { SongsRepository } from '../repositories/SongsRepository';
 import { PlaylistsRepository } from '../repositories/PlaylistsRepository';
@@ -12,6 +15,9 @@ import type { ISongsService } from '../interfaces/ISongsService';
 import type { IPlaylistsService } from '../interfaces/IPlaylistsService';
 import type { IStoriesService } from '../interfaces/IStoriesService';
 import type { ISongLikesService } from '../interfaces/ISongLikesService';
+import type { IChatsService } from '../interfaces/IChatsService';
+import type { IMessagesService } from '../interfaces/IMessagesService';
+import type { IFollowersService } from '../interfaces/IFollowersService';
 
 /**
  * Dependency Injection Container
@@ -25,6 +31,9 @@ class ServiceContainer {
   private readonly _playlistsService: IPlaylistsService;
   private readonly _storiesService: IStoriesService;
   private readonly _songLikesService: ISongLikesService;
+  private readonly _chatsService: IChatsService;
+  private readonly _messagesService: IMessagesService;
+  private readonly _followersService: IFollowersService;
 
   // Repositories
   private readonly _authRepository: AuthRepository;
@@ -39,6 +48,9 @@ class ServiceContainer {
     this._playlistsService = new PlaylistsService();
     this._storiesService = new StoriesService();
     this._songLikesService = new SongLikesService();
+    this._chatsService = new ChatsService();
+    this._messagesService = new MessagesService();
+    this._followersService = new FollowersService();
 
     // Initialize repositories with services
     this._authRepository = new AuthRepository(this._authService);
@@ -66,6 +78,18 @@ class ServiceContainer {
 
   get songLikesService(): ISongLikesService {
     return this._songLikesService;
+  }
+
+  get chatsService(): IChatsService {
+    return this._chatsService;
+  }
+
+  get messagesService(): IMessagesService {
+    return this._messagesService;
+  }
+
+  get followersService(): IFollowersService {
+    return this._followersService;
   }
 
   // Repository getters

@@ -33,43 +33,47 @@ function HomeContent() {
   return (
     <div className="flex-1 overflow-y-auto bg-black">
       {/* Top Bar */}
-      <div className="sticky top-0 z-10 bg-black bg-opacity-80 backdrop-blur-sm border-b border-gray-900 px-6 py-4">
+      <div className="sticky top-0 z-10 bg-black border-b border-gray-900 px-4 py-3">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Bird</h1>
-          <div className="flex items-center gap-4">
-            <button className="p-2 rounded hover:bg-white hover:bg-opacity-10 text-gray-400 hover:text-white">
+          <h1 className="text-2xl font-bold">Music</h1>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                // Navigate to messages - will be handled by routing
+                window.location.href = '/messages';
+              }}
+              className="p-2 rounded hover:bg-white hover:bg-opacity-10 text-white"
+            >
               <MessageCircle size={20} />
             </button>
           </div>
         </div>
 
         {/* Stories */}
-        {stories.length > 0 && (
-          <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
+        <div className="mt-4 flex gap-4 overflow-x-auto pb-2 px-4">
+          <StoryCircle
+            isCreate
+            userName="Your story"
+            onClick={() => {
+              // Handle story creation
+            }}
+          />
+          {stories.map((story) => (
             <StoryCircle
-              isCreate
-              userName="Your story"
+              key={story.id}
+              userName={story.userName}
+              profileImageURL={story.profileImageURL}
+              isViewed={story.isViewed}
               onClick={() => {
-                // Handle story creation
+                playSong(story.song, [story.song]);
               }}
             />
-            {stories.map((story) => (
-              <StoryCircle
-                key={story.id}
-                userName={story.userName}
-                profileImageURL={story.profileImageURL}
-                isViewed={story.isViewed}
-                onClick={() => {
-                  playSong(story.song, [story.song]);
-                }}
-              />
-            ))}
-          </div>
-        )}
+          ))}
+        </div>
       </div>
 
       {/* Hero Section */}
-      <div className="relative mx-4 mt-6 mb-8 rounded-3xl overflow-hidden" style={{ height: '420px' }}>
+      <div className="relative mx-4 mt-3 mb-6 rounded-[42px] overflow-hidden" style={{ height: '420px' }}>
         <div
           className="absolute inset-0"
           style={{
@@ -79,13 +83,13 @@ function HomeContent() {
         <div className="relative h-full flex flex-col items-center justify-center p-8">
           <button
             onClick={handlePlayMyVibe}
-            className="flex flex-col items-center gap-4 text-white"
+            className="flex flex-col items-center gap-7 text-white"
           >
             <div className="flex items-center gap-3">
-              <Play size={24} fill="currentColor" />
-              <span className="text-4xl font-bold tracking-wide">My Vibe</span>
+              <Play size={20} fill="currentColor" />
+              <span className="text-[36px] font-bold tracking-[1.4px]">My Vibe</span>
             </div>
-            <span className="px-6 py-2 bg-white bg-opacity-20 rounded-full text-sm">
+            <span className="px-6 py-2.5 bg-white bg-opacity-[0.22] rounded-full text-base">
               Breathe with me
             </span>
           </button>
@@ -97,24 +101,24 @@ function HomeContent() {
         <section className="px-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Quick Play</h2>
-            <button className="text-sm text-gray-400 hover:text-white">See all</button>
+            <button className="text-xs text-gray-400 hover:text-white">See all</button>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-2">
             {librarySongs.slice(0, 10).map((song) => (
               <button
                 key={song.id}
                 onClick={() => playSong(song, librarySongs)}
-                className="flex items-center gap-3 px-4 py-3 bg-white bg-opacity-5 rounded-2xl hover:bg-opacity-10 transition-colors min-w-fit"
+                className="flex items-center gap-3.5 px-4.5 py-3.5 bg-white bg-opacity-[0.08] rounded-[22px] hover:bg-opacity-10 transition-colors min-w-fit"
               >
                 {song.cover && (
                   <img
                     src={song.cover}
                     alt={song.title}
-                    className="w-14 h-14 rounded-xl object-cover"
+                    className="w-[60px] h-[60px] rounded-xl object-cover"
                   />
                 )}
                 <div className="text-left">
-                  <p className="text-sm font-medium">{song.title}</p>
+                  <p className="text-base font-medium">{song.title}</p>
                   <p className="text-xs text-gray-400">{song.artist}</p>
                 </div>
               </button>
