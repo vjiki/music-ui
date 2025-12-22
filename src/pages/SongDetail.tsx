@@ -48,10 +48,17 @@ export default function SongDetail() {
   const view = searchParams.get('view') || 'detailed';
   const isMinimalView = view === 'minimal';
 
-  // If no current song or songId doesn't match, try to find it in queue
-  const song = currentSong?.id === songId 
-    ? currentSong 
-    : queue.find(s => s.id === songId) || currentSong;
+  // Always use currentSong if available, otherwise try to find by songId
+  const song = currentSong || queue.find(s => s.id === songId) || null;
+
+  // Update URL when currentSong changes (e.g., when next song starts playing)
+  useEffect(() => {
+    if (currentSong && currentSong.id !== songId) {
+      // Update the URL to match the currently playing song
+      const viewParam = searchParams.get('view') || 'detailed';
+      navigate(`/song/${currentSong.id}?view=${viewParam}`, { replace: true });
+    }
+  }, [currentSong, songId, navigate, searchParams]);
 
   useEffect(() => {
     // If we have a songId but no matching song, navigate back
@@ -86,7 +93,8 @@ export default function SongDetail() {
     }
   };
 
-  const isCurrentSongPlaying = isPlaying && song.id === currentSong?.id;
+  // Check if the current song is playing - use currentSong.id to ensure it matches
+  const isCurrentSongPlaying = isPlaying && currentSong && song.id === currentSong.id;
 
   const formatTime = (seconds: number) => {
     if (isNaN(seconds)) return '0:00';
@@ -350,7 +358,7 @@ export default function SongDetail() {
                 onClick={handlePlayClick}
                 className="px-6 py-3 bg-yellow-500 text-black rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center gap-2"
               >
-                {isPlaying && song.id === currentSong?.id ? (
+                {isCurrentSongPlaying ? (
                   <>
                     <Pause size={20} fill="currentColor" />
                     <span>Пауза</span>

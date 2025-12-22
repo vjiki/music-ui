@@ -109,10 +109,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             audioRef.current.src = transformedUrl;
             audioRef.current.crossOrigin = 'anonymous';
             audioRef.current.load();
-            audioRef.current.play().catch((error) => {
-              console.error('Error playing next song:', error);
-              setIsPlaying(false);
-            });
+            audioRef.current.play()
+              .then(() => {
+                // Explicitly set playing state when next song starts
+                setIsPlaying(true);
+              })
+              .catch((error) => {
+                console.error('Error playing next song:', error);
+                setIsPlaying(false);
+              });
           }
           return nextSong;
         });
