@@ -101,10 +101,10 @@ function HomeContent() {
           >
             <div className="flex items-center gap-3">
               <Play size={20} fill="currentColor" />
-              <span className="text-[36px] font-bold tracking-[1.4px]">My Vibe</span>
+              <span className="text-[36px] font-bold tracking-[1.4px]">Сергей Гей</span>
             </div>
             <span className="px-6 py-2.5 bg-white bg-opacity-[0.22] rounded-full text-base">
-              Breathe with me
+              С днюхой Гей
             </span>
           </button>
         </div>
