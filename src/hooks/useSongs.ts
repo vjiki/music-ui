@@ -9,7 +9,7 @@ const EMPTY_SONGS_PROMISE = Promise.resolve([] as Song[]);
  * Custom hook for fetching songs
  * Uses React 19's use() hook for promise handling
  * Leverages React Cache through repository pattern
- * Skips API calls for guest users
+ * Makes API calls for guest users using the guest user ID
  * 
  * IMPORTANT: The promise must be memoized to prevent React from re-suspending
  * React Cache in the repository handles deduplication, but we need stable promise references
@@ -18,9 +18,10 @@ export function useSongs(userId: string): Song[] {
   // Memoize the promise to ensure stable reference across renders
   // React Cache in the repository will deduplicate actual API calls
   const songsPromise = useMemo(() => {
-    if (userId === 'guest' || !userId) {
+    if (!userId) {
       return EMPTY_SONGS_PROMISE;
     }
+    // Use the provided userId (including guest user ID) for API calls
     // React Cache in repository ensures same promise for same userId
     return serviceContainer.songsRepository.getSongs(userId);
   }, [userId]);

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { usePlayer } from '../contexts/PlayerContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, GUEST_USER_ID } from '../contexts/AuthContext';
 import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Heart, HeartOff, MoreHorizontal } from 'lucide-react';
 import SafeImage from './SafeImage';
 
@@ -120,7 +120,7 @@ export default function Player() {
           <button 
             onClick={async (e) => {
               e.stopPropagation();
-              if (currentSong && currentUserId && currentUserId !== 'guest') {
+              if (currentSong && currentUserId && currentUserId !== GUEST_USER_ID) {
                 try {
                   await toggleDislike(currentUserId);
                 } catch (error) {
@@ -131,7 +131,7 @@ export default function Player() {
             className={`p-1.5 sm:p-2 rounded hover:bg-white hover:bg-opacity-10 transition-colors ${
               currentSong?.isDisliked ? 'text-blue-500' : 'text-gray-400 hover:text-white'
             }`}
-            disabled={!currentSong || currentUserId === 'guest'}
+            disabled={!currentSong || currentUserId === GUEST_USER_ID}
           >
             <HeartOff size={18} fill={currentSong?.isDisliked ? 'currentColor' : 'none'} strokeWidth={currentSong?.isDisliked ? 0 : 2} />
           </button>
@@ -156,7 +156,7 @@ export default function Player() {
           <button 
             onClick={async (e) => {
               e.stopPropagation();
-              if (currentSong && currentUserId && currentUserId !== 'guest') {
+              if (currentSong && currentUserId && currentUserId !== GUEST_USER_ID) {
                 try {
                   await toggleLike(currentUserId);
                 } catch (error) {
@@ -167,7 +167,7 @@ export default function Player() {
             className={`p-1.5 sm:p-2 rounded hover:bg-white hover:bg-opacity-10 transition-colors ${
               currentSong?.isLiked ? 'text-red-500' : 'text-gray-400 hover:text-white'
             }`}
-            disabled={!currentSong || currentUserId === 'guest'}
+            disabled={!currentSong || currentUserId === GUEST_USER_ID}
           >
             <Heart size={18} fill={currentSong?.isLiked ? 'currentColor' : 'none'} strokeWidth={currentSong?.isLiked ? 0 : 2} />
           </button>
@@ -181,7 +181,7 @@ export default function Player() {
           <button 
             onClick={async (e) => {
               e.stopPropagation();
-              if (currentSong && currentUserId && currentUserId !== 'guest') {
+              if (currentSong && currentUserId && currentUserId !== GUEST_USER_ID) {
                 try {
                   await toggleDislike(currentUserId);
                 } catch (error) {
@@ -193,7 +193,7 @@ export default function Player() {
               currentSong?.isDisliked ? 'text-blue-500' : 'text-gray-400 hover:text-white'
             }`}
             title={currentSong?.isDisliked ? 'Remove dislike' : 'Dislike'}
-            disabled={!currentSong || currentUserId === 'guest'}
+            disabled={!currentSong || currentUserId === GUEST_USER_ID}
           >
             <HeartOff size={20} fill={currentSong?.isDisliked ? 'currentColor' : 'none'} strokeWidth={currentSong?.isDisliked ? 0 : 2} />
           </button>
@@ -240,7 +240,7 @@ export default function Player() {
           <button 
             onClick={async (e) => {
               e.stopPropagation();
-              if (currentSong && currentUserId && currentUserId !== 'guest') {
+              if (currentSong && currentUserId && currentUserId !== GUEST_USER_ID) {
                 try {
                   await toggleLike(currentUserId);
                 } catch (error) {
@@ -252,7 +252,7 @@ export default function Player() {
               currentSong?.isLiked ? 'text-red-500' : 'text-gray-400 hover:text-white'
             }`}
             title={currentSong?.isLiked ? 'Unlike' : 'Like'}
-            disabled={!currentSong || currentUserId === 'guest'}
+            disabled={!currentSong || currentUserId === GUEST_USER_ID}
           >
             <Heart size={20} fill={currentSong?.isLiked ? 'currentColor' : 'none'} strokeWidth={currentSong?.isLiked ? 0 : 2} />
           </button>

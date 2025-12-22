@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useRef, useEffect, useCallback, Re
 import type { Song } from '../types';
 import { transformAudioUrl } from '../utils/urlUtils';
 import { serviceContainer } from '../core/di/ServiceContainer';
+import { GUEST_USER_ID } from './AuthContext';
 
 type RepeatMode = 'off' | 'all' | 'one';
 
@@ -323,7 +324,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       console.log('toggleLike: No currentSong');
       return;
     }
-    if (userId === 'guest') {
+    if (userId === GUEST_USER_ID) {
       console.log('toggleLike: User is guest, cannot like');
       return;
     }
@@ -380,7 +381,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       console.log('toggleDislike: No currentSong');
       return;
     }
-    if (userId === 'guest') {
+    if (userId === GUEST_USER_ID) {
       console.log('toggleDislike: User is guest, cannot dislike');
       return;
     }

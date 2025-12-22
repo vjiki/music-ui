@@ -2,6 +2,18 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { serviceContainer } from '../core/di/ServiceContainer';
 import type { User, AuthRequest } from '../types';
 
+// Default guest user for unauthenticated users
+export const GUEST_USER_ID = '3762deba-87a9-482e-b716-2111232148ca';
+export const GUEST_USER_EMAIL = 'guest@example.com';
+
+export const GUEST_USER: User = {
+  id: GUEST_USER_ID,
+  email: GUEST_USER_EMAIL,
+  isActive: true,
+  isVerified: false,
+  createdAt: new Date().toISOString(),
+};
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
@@ -53,7 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('bird_user');
   };
 
-  const currentUserId = user?.id || 'guest';
+  // Use guest user ID when not logged in
+  const currentUserId = user?.id || GUEST_USER_ID;
 
   return (
     <AuthContext.Provider
