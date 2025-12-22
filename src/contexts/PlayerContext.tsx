@@ -15,7 +15,7 @@ interface PlayerContextType {
   librarySongs: Song[];
   isShuffled: boolean;
   repeatMode: RepeatMode;
-  playSong: (song: Song, queue?: Song[]) => void;
+  playSong: (song: Song, queue?: Song[], shouldNavigate?: boolean) => void;
   togglePlayPause: () => void;
   setCurrentTime: (time: number) => void;
   setVolume: (volume: number) => void;
@@ -118,6 +118,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
                 console.error('Error playing next song:', error);
                 setIsPlaying(false);
               });
+            // Update currentSong without navigation (auto-advance doesn't navigate)
+            setCurrentSong(nextSong);
           }
           return nextSong;
         });
@@ -126,23 +128,50 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
+    
+    // Sync isPlaying state with actual audio playback state
+    // This ensures the UI stays in sync even if audio state changes outside of our control
+    const syncPlayingState = () => {
+      if (audio) {
+        const actuallyPlaying = !audio.paused && !audio.ended && audio.readyState > 2;
+        setIsPlaying((prev) => {
+          // Only update if there's a mismatch to avoid unnecessary re-renders
+          if (prev !== actuallyPlaying) {
+            return actuallyPlaying;
+          }
+          return prev;
+        });
+      }
+    };
 
     audio.addEventListener('timeupdate', updateTime);
     audio.addEventListener('loadedmetadata', updateDuration);
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('play', handlePlay);
     audio.addEventListener('pause', handlePause);
+    audio.addEventListener('playing', handlePlay); // Also listen to 'playing' event
+    audio.addEventListener('waiting', handlePause); // Pause when buffering
+    audio.addEventListener('stalled', syncPlayingState); // Sync when stalled
+    audio.addEventListener('suspend', syncPlayingState); // Sync when suspended
+
+    // Periodic sync to catch any state mismatches
+    const syncInterval = setInterval(syncPlayingState, 1000);
 
     return () => {
+      clearInterval(syncInterval);
       audio.removeEventListener('timeupdate', updateTime);
       audio.removeEventListener('loadedmetadata', updateDuration);
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('playing', handlePlay);
+      audio.removeEventListener('waiting', handlePause);
+      audio.removeEventListener('stalled', syncPlayingState);
+      audio.removeEventListener('suspend', syncPlayingState);
     };
   }, [repeatMode]);
 
-  const playSong = useCallback((song: Song, newQueue?: Song[]) => {
+  const playSong = useCallback((song: Song, newQueue?: Song[], shouldNavigate: boolean = true) => {
     // Set song immediately to show player UI (synchronous, no delay)
     // Use functional updates to prevent unnecessary re-renders if same song
     const isNewSong = currentSong?.id !== song.id;
@@ -168,8 +197,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       });
     }
 
-    // Navigate to detailed song detail view when a new song is played (from play button)
-    if (isNewSong && navigateToSong) {
+    // Navigate to detailed song detail view when a new song is played (only if shouldNavigate is true)
+    // This allows next/previous buttons to skip navigation
+    if (isNewSong && shouldNavigate && navigateToSong) {
       navigateToSong(song.id);
     }
     
@@ -219,12 +249,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const togglePlayPause = () => {
     const audio = audioRef.current;
     if (audio) {
-      if (isPlaying) {
+      // Check actual audio state to ensure we're in sync
+      const actuallyPlaying = !audio.paused && !audio.ended;
+      if (actuallyPlaying || isPlaying) {
         audio.pause();
+        setIsPlaying(false);
       } else {
-        audio.play().catch((error) => {
-          console.error('Error playing audio:', error);
-        });
+        audio.play()
+          .then(() => {
+            setIsPlaying(true);
+          })
+          .catch((error) => {
+            console.error('Error playing audio:', error);
+            setIsPlaying(false);
+          });
       }
     }
   };
@@ -252,7 +290,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         nextSong = queue[nextIndex];
       }
       
-      playSong(nextSong, queue);
+      // Don't navigate when using next/previous buttons
+      playSong(nextSong, queue, false);
     }
   };
 
@@ -262,7 +301,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       // For sequential, go to previous song
       const currentIndex = queue.findIndex((s) => s.id === currentSong.id);
       const prevIndex = currentIndex === 0 ? queue.length - 1 : currentIndex - 1;
-      playSong(queue[prevIndex], queue);
+      // Don't navigate when using next/previous buttons
+      playSong(queue[prevIndex], queue, false);
     }
   };
 

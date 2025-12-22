@@ -112,11 +112,29 @@ export default function Player() {
         </div>
 
         {/* Main Controls - Mobile: simplified, Desktop: full */}
-        {/* Mobile Layout: Only essential controls */}
+        {/* Mobile Layout: Essential controls with dislike button */}
         <div 
           className="flex-1 flex items-center justify-center gap-1 sm:gap-2 md:hidden" 
           onClick={(e) => e.stopPropagation()}
         >
+          <button 
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (currentSong && currentUserId && currentUserId !== 'guest') {
+                try {
+                  await toggleDislike(currentUserId);
+                } catch (error) {
+                  console.error('Error toggling dislike:', error);
+                }
+              }
+            }}
+            className={`p-1.5 sm:p-2 rounded hover:bg-white hover:bg-opacity-10 transition-colors ${
+              currentSong?.isDisliked ? 'text-blue-500' : 'text-gray-400 hover:text-white'
+            }`}
+            disabled={!currentSong || currentUserId === 'guest'}
+          >
+            <HeartOff size={18} fill={currentSong?.isDisliked ? 'currentColor' : 'none'} strokeWidth={currentSong?.isDisliked ? 0 : 2} />
+          </button>
           <button
             onClick={previousSong}
             className="p-1.5 sm:p-2 rounded hover:bg-white hover:bg-opacity-10 text-gray-400 hover:text-white transition-colors"
@@ -125,9 +143,9 @@ export default function Player() {
           </button>
           <button
             onClick={togglePlayPause}
-            className="p-2.5 sm:p-3 rounded-full bg-yellow-500 text-black hover:bg-yellow-400 transition-colors flex-shrink-0"
+            className="p-3.5 sm:p-4 rounded-full bg-yellow-500 text-black hover:bg-yellow-400 transition-colors flex-shrink-0"
           >
-            {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
+            {isPlaying ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" />}
           </button>
           <button
             onClick={nextSong}
