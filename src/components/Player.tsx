@@ -104,10 +104,10 @@ export default function Player() {
             )}
           </button>
 
-          {/* Song Info - Hidden on very small screens, shown on mobile+ */}
-          <div className="min-w-0 text-left flex-1 hidden min-[375px]:block max-w-[120px] sm:max-w-none">
-            <p className="text-xs sm:text-sm font-medium truncate text-white">{currentSong.title}</p>
-            <p className="text-[10px] sm:text-xs text-gray-400 truncate">{currentSong.artist}</p>
+          {/* Song Info - Hidden on mobile, shown on desktop only */}
+          <div className="min-w-0 text-left flex-1 hidden md:block max-w-[120px] lg:max-w-none">
+            <p className="text-xs lg:text-sm font-medium truncate text-white">{currentSong.title}</p>
+            <p className="text-[10px] lg:text-xs text-gray-400 truncate">{currentSong.artist}</p>
           </div>
         </div>
 
@@ -240,17 +240,17 @@ export default function Player() {
           </button>
         </div>
 
-        {/* Right Section - Time and More (Mobile: time only, Desktop: time + more) */}
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
-          {/* Time Display - Always visible */}
-          <div className="flex items-center gap-1 text-[10px] sm:text-xs text-gray-400 min-w-[50px] sm:min-w-[70px] justify-end">
+        {/* Right Section - Time and More (Hidden on mobile, shown on desktop) */}
+        <div className="hidden md:flex items-center gap-2 lg:gap-3 flex-shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
+          {/* Time Display - Hidden on mobile, shown on desktop */}
+          <div className="flex items-center gap-1 text-xs lg:text-sm text-gray-400 min-w-[70px] lg:min-w-[90px] justify-end">
             <span>{formatTime(currentTime)}</span>
-            <span className="hidden sm:inline">/</span>
-            <span className="hidden sm:inline">{formatTime(duration)}</span>
+            <span>/</span>
+            <span>{formatTime(duration)}</span>
           </div>
 
-          {/* Right Controls - Hidden on mobile, shown on desktop */}
-          <button className="hidden md:block p-2 rounded hover:bg-white hover:bg-opacity-10 text-gray-400 hover:text-white transition-colors">
+          {/* Right Controls */}
+          <button className="p-2 rounded hover:bg-white hover:bg-opacity-10 text-gray-400 hover:text-white transition-colors">
             <MoreHorizontal size={20} />
           </button>
         </div>
