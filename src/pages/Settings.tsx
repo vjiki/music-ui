@@ -18,7 +18,7 @@ export default function Settings() {
   return (
     <div className="flex flex-col h-screen bg-black text-white">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-black border-b border-gray-900 px-4 py-3">
+      <div className="sticky z-10 bg-black border-b border-gray-900 px-4 py-3" style={{ top: 'calc(56px + env(safe-area-inset-top, 0px))' }}>
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-2 rounded hover:bg-white hover:bg-opacity-10">
             <ChevronLeft size={20} className="text-white" />

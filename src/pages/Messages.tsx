@@ -130,7 +130,7 @@ function MessagesContent() {
   return (
     <div className="flex-1 overflow-y-auto bg-black">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-black border-b border-gray-900 px-4 py-3">
+      <div className="sticky z-10 bg-black border-b border-gray-900 px-4 py-3" style={{ top: 'calc(56px + env(safe-area-inset-top, 0px))' }}>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold">{currentUserNickname}</span>

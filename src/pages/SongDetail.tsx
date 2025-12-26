@@ -118,7 +118,7 @@ export default function SongDetail() {
     return (
       <div className="flex-1 overflow-y-auto bg-gray-900 text-white">
         {/* Navigation */}
-        <div className="sticky top-0 z-10 bg-gray-900 bg-opacity-80 backdrop-blur-sm px-6 py-4">
+        <div className="sticky z-10 bg-gray-900 bg-opacity-80 backdrop-blur-sm px-6 py-4" style={{ top: 'calc(56px + env(safe-area-inset-top, 0px))' }}>
           <button
             type="button"
             onClick={() => navigate(-1)}
@@ -304,7 +304,7 @@ export default function SongDetail() {
   return (
     <div className="flex-1 overflow-y-auto bg-black text-white">
       {/* Navigation */}
-      <div className="sticky top-0 z-10 bg-black bg-opacity-80 backdrop-blur-sm px-6 py-4">
+      <div className="sticky z-10 bg-black bg-opacity-80 backdrop-blur-sm px-6 py-4" style={{ top: 'calc(56px + env(safe-area-inset-top, 0px))' }}>
         <button
           type="button"
           onClick={() => navigate(-1)}

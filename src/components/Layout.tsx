@@ -99,8 +99,8 @@ function LayoutContent({ children }: LayoutProps) {
   return (
     <div className="flex flex-col h-screen bg-black text-white overflow-hidden">
       {/* Top Navigation Bar */}
-      <div className="fixed top-0 left-0 right-0 bg-black/95 backdrop-blur-sm border-b border-white/10 z-40">
-        <div className="flex items-center justify-between gap-2 px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 bg-black/95 backdrop-blur-sm border-b border-white/10 z-40" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <div className="flex items-center justify-between gap-2 px-4 py-3 min-h-[56px]">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-white">Bird</h1>
             {/* Stories - smaller size */}
@@ -169,7 +169,14 @@ function LayoutContent({ children }: LayoutProps) {
         </div>
       </div>
 
-      <main className={`flex-1 overflow-y-auto ${isSongDetailPage ? 'pb-0 pt-0' : 'pb-20 pt-16'}`}>
+      <main 
+        className={`flex-1 overflow-y-auto ${isSongDetailPage ? 'pb-0' : 'pb-20'}`}
+        style={{ 
+          paddingTop: isSongDetailPage 
+            ? '0' 
+            : 'calc(56px + env(safe-area-inset-top, 0px))'
+        }}
+      >
         {children}
       </main>
       
