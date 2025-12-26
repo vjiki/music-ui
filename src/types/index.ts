@@ -111,3 +111,17 @@ export interface Follower {
   followedAt?: string;
 }
 
+export interface Short {
+  id: string;
+  artist?: string;
+  audio_url?: string;
+  cover?: string;
+  title?: string;
+  video_url?: string;
+  type: string;
+  isLiked: boolean;
+  isDisliked: boolean;
+  likesCount: number;
+  dislikesCount: number;
+}
+

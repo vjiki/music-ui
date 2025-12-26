@@ -10,6 +10,7 @@ import Messages from './pages/Messages';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import SongDetail from './pages/SongDetail';
+import Samples from './pages/Samples';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
                 <Route path="/messages" element={<Messages />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/samples" element={<Samples />} />
                 <Route path="/song/:songId" element={<SongDetail />} />
               </Routes>
             </Layout>

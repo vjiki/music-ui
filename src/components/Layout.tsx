@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState, Suspense } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { Home, Search, ListMusic, User, MessageCircle } from 'lucide-react';
+import { Home, Search, ListMusic, User, MessageCircle, Video } from 'lucide-react';
 import { usePlayer, setNavigateToSong } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useStoriesSafe } from '../hooks/useStoriesSafe';
@@ -84,6 +84,7 @@ function LayoutContent({ children }: LayoutProps) {
 
   const bottomNavItems = [
     { path: '/', icon: Home, label: 'Home' },
+    { path: '/samples', icon: Video, label: 'Samples' },
     { path: '/profile', icon: User, label: 'Profile' },
   ];
 
@@ -95,6 +96,7 @@ function LayoutContent({ children }: LayoutProps) {
 
   // Hide player bar when on song detail page
   const isSongDetailPage = location.pathname.startsWith('/song/');
+  const isSamplesPage = location.pathname === '/samples';
 
   return (
     <div className="flex flex-col h-screen bg-black text-white overflow-hidden">
@@ -170,9 +172,9 @@ function LayoutContent({ children }: LayoutProps) {
       </div>
 
       <main 
-        className={`flex-1 overflow-y-auto ${isSongDetailPage ? 'pb-0' : 'pb-20'}`}
+        className={`flex-1 overflow-y-auto ${isSongDetailPage || isSamplesPage ? 'pb-0' : 'pb-20'}`}
         style={{ 
-          paddingTop: isSongDetailPage 
+          paddingTop: isSongDetailPage || isSamplesPage
             ? '0' 
             : 'calc(56px + env(safe-area-inset-top, 0px))'
         }}
@@ -180,11 +182,11 @@ function LayoutContent({ children }: LayoutProps) {
         {children}
       </main>
       
-      {/* Bottom Tab Bar with Player - hide when on song detail page */}
+      {/* Bottom Tab Bar with Player - hide player on samples page, but show navigation */}
       {!isSongDetailPage && (
         <div className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-sm border-t border-white/10 z-50">
-          {/* Player - render when currentSong exists */}
-          {currentSong ? (
+          {/* Player - render when currentSong exists, but hide on samples page */}
+          {currentSong && !isSamplesPage ? (
             <Player />
           ) : null}
           <nav className="flex items-center justify-around px-2 py-2.5">
