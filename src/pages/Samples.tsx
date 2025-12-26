@@ -463,14 +463,14 @@ function ShortCard({
               })
               .catch((error) => {
                 console.error('Error playing video:', error);
-                // Retry once after a short delay for mobile browsers
+                // Retry after delay - allow time for media to download from backend (can take up to a minute)
                 setTimeout(() => {
                   if (video && video.readyState >= 2) {
                     video.play().catch((err) => {
                       console.error('Retry play failed:', err);
                     });
                   }
-                }, 500);
+                }, 20000); // 20 seconds to allow for slow backend downloads
               });
           } else {
             // Wait for video to load
@@ -486,6 +486,14 @@ function ShortCard({
                 })
                 .catch((error) => {
                   console.error('Error playing video after load:', error);
+                  // Retry after delay - allow time for media to download from backend
+                  setTimeout(() => {
+                    if (video && video.readyState >= 2) {
+                      video.play().catch((err) => {
+                        console.error('Retry play after load failed:', err);
+                      });
+                    }
+                  }, 20000); // 20 seconds to allow for slow backend downloads
                 });
               video.removeEventListener('loadeddata', onLoadedData);
             };
@@ -509,14 +517,14 @@ function ShortCard({
               })
               .catch((error) => {
                 console.error('Error playing audio:', error);
-                // Retry once after a short delay for mobile browsers
+                // Retry after delay - allow time for media to download from backend (can take up to a minute)
                 setTimeout(() => {
                   if (audio && audio.readyState >= 2) {
                     audio.play().catch((err) => {
                       console.error('Retry play failed:', err);
                     });
                   }
-                }, 500);
+                }, 20000); // 20 seconds to allow for slow backend downloads
               });
           } else {
             // Wait for audio to load
@@ -532,6 +540,14 @@ function ShortCard({
                 })
                 .catch((error) => {
                   console.error('Error playing audio after load:', error);
+                  // Retry after delay - allow time for media to download from backend
+                  setTimeout(() => {
+                    if (audio && audio.readyState >= 2) {
+                      audio.play().catch((err) => {
+                        console.error('Retry play after load failed:', err);
+                      });
+                    }
+                  }, 20000); // 20 seconds to allow for slow backend downloads
                 });
               audio.removeEventListener('loadeddata', onLoadedData);
             };
@@ -541,8 +557,8 @@ function ShortCard({
         }
       };
 
-      // Initial attempt with delay for mobile
-      const timeoutId = setTimeout(attemptPlay, 300);
+      // Initial attempt with delay - allow time for media to load
+      const timeoutId = setTimeout(attemptPlay, 2000); // 2 seconds to allow media to start loading
       return () => clearTimeout(timeoutId);
     } else {
       if (videoRef.current) {
