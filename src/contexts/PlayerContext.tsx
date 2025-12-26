@@ -3,6 +3,7 @@ import type { Song } from '../types';
 import { transformAudioUrl } from '../utils/urlUtils';
 import { serviceContainer } from '../core/di/ServiceContainer';
 import { GUEST_USER_ID } from './AuthContext';
+import { cacheService } from '../services/CacheService';
 
 type RepeatMode = 'off' | 'all' | 'one';
 
@@ -210,20 +211,33 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const transformedUrl = transformAudioUrl(song.audio_url);
       const audio = audioRef.current;
       
-      // Set source and attributes
-      audio.src = transformedUrl;
-      audio.crossOrigin = 'anonymous';
-      
-      // Load audio (this is async but doesn't block UI)
-      audio.load();
-      
-      // Play audio (this is async)
-      audio.play()
-        .then(() => {
-          // Audio started playing successfully
+      // Check cache first, then load audio
+      const loadAndPlayAudio = async () => {
+        try {
+          // Check if audio is cached
+          const cachedUrl = await cacheService.getCachedAudioURL(transformedUrl);
+          
+          if (cachedUrl) {
+            // Use cached audio
+            audio.src = cachedUrl;
+            audio.crossOrigin = 'anonymous';
+            audio.load();
+          } else {
+            // Not in cache, use original URL
+            audio.src = transformedUrl;
+            audio.crossOrigin = 'anonymous';
+            audio.load();
+          }
+          
+          // Play audio (this is async)
+          await audio.play();
           setIsPlaying(true);
-        })
-        .catch((error) => {
+          
+          // Only cache after successful playback
+          cacheService.cacheAudio(transformedUrl, song.title, song.artist, song.cover).catch(() => {
+            // Ignore cache errors
+          });
+        } catch (error) {
           console.error('Error playing audio:', error);
           console.error('Audio URL:', transformedUrl);
           setIsPlaying(false);
@@ -238,12 +252,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
               audio.load();
               audio.play()
                 .then(() => setIsPlaying(true))
-                .catch((fallbackError) => {
-                  console.error('Fallback audio URL also failed:', fallbackError);
+                .catch((err) => {
+                  console.error('Fallback URL also failed:', err);
+                  setIsPlaying(false);
                 });
             }
           }
-        });
+        }
+      };
+      
+      loadAndPlayAudio();
     }
   }, [currentSong]);
 

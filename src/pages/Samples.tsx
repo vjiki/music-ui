@@ -6,6 +6,7 @@ import { Heart, ThumbsDown } from 'lucide-react';
 import SafeImage from '../components/SafeImage';
 import SuspenseFallback from '../components/SuspenseFallback';
 import { transformAudioUrl, transformImageUrl } from '../utils/urlUtils';
+import { cacheService } from '../services/CacheService';
 import type { Short } from '../types';
 
 function SamplesContent() {
@@ -108,6 +109,62 @@ function SamplesContent() {
       setCurrentIndex(newIndex);
     }
   };
+
+  // Handle mouse wheel for desktop scrolling with snap behavior
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!scrollContainerRef.current) return;
+    
+    const container = scrollContainerRef.current;
+    const delta = e.deltaY;
+    
+    // Only intercept if scrolling would move to next/previous short
+    // Otherwise let native scrolling handle it
+    if (Math.abs(delta) > 50) {
+      e.preventDefault();
+      const direction = delta > 0 ? 1 : -1;
+      const targetIndex = Math.max(0, Math.min(shorts.length - 1, currentIndex + direction));
+      
+      if (targetIndex !== currentIndex) {
+        setCurrentIndex(targetIndex);
+        const element = container.querySelector(`[data-short-index="${targetIndex}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    }
+  };
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!scrollContainerRef.current) return;
+      
+      if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+        e.preventDefault();
+        if (currentIndex < shorts.length - 1) {
+          const nextIndex = currentIndex + 1;
+          setCurrentIndex(nextIndex);
+          const element = scrollContainerRef.current.querySelector(`[data-short-index="${nextIndex}"]`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        e.preventDefault();
+        if (currentIndex > 0) {
+          const prevIndex = currentIndex - 1;
+          setCurrentIndex(prevIndex);
+          const element = scrollContainerRef.current.querySelector(`[data-short-index="${prevIndex}"]`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, shorts.length]);
 
   // Handle like
   const handleLike = async (short: Short) => {
@@ -214,9 +271,16 @@ function SamplesContent() {
   return (
     <div
       ref={scrollContainerRef}
-      className="h-full overflow-y-scroll snap-y snap-mandatory bg-black pb-20"
+      className="h-full w-full overflow-y-scroll snap-y snap-mandatory bg-black pb-20"
       onScroll={handleScroll}
-      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      onWheel={handleWheel}
+      style={{ 
+        scrollbarWidth: 'none', 
+        msOverflowStyle: 'none',
+        scrollBehavior: 'smooth',
+        height: '100vh',
+        position: 'relative'
+      }}
     >
       <style>{`
         div::-webkit-scrollbar {
@@ -297,19 +361,76 @@ function ShortCard({
     };
   }, [short.id, videoRefs, audioRefs]);
 
+  // Load video/audio from cache when shouldLoadMedia becomes true
+  useEffect(() => {
+    if (shouldLoadMedia && isVideo && videoUrl && videoRef.current) {
+      const loadVideo = async () => {
+        try {
+          const cachedUrl = await cacheService.getCachedVideoURL(videoUrl);
+          if (cachedUrl && videoRef.current) {
+            videoRef.current.src = cachedUrl;
+          } else if (videoRef.current) {
+            videoRef.current.src = videoUrl;
+          }
+        } catch (error) {
+          console.error('Error loading video from cache:', error);
+          if (videoRef.current) {
+            videoRef.current.src = videoUrl;
+          }
+        }
+      };
+      loadVideo();
+    } else if (shouldLoadMedia && !isVideo && audioUrl && audioRef.current) {
+      const loadAudio = async () => {
+        try {
+          const cachedUrl = await cacheService.getCachedAudioURL(audioUrl);
+          if (cachedUrl && audioRef.current) {
+            audioRef.current.src = cachedUrl;
+          } else if (audioRef.current) {
+            audioRef.current.src = audioUrl;
+          }
+        } catch (error) {
+          console.error('Error loading audio from cache:', error);
+          if (audioRef.current) {
+            audioRef.current.src = audioUrl;
+          }
+        }
+      };
+      loadAudio();
+    }
+  }, [shouldLoadMedia, isVideo, videoUrl, audioUrl]);
+
   // Auto-play when this card becomes active
   useEffect(() => {
     if (isPlaying && shouldLoadMedia) {
       // Small delay to ensure refs are registered and src is set
       const timeoutId = setTimeout(() => {
         if (isVideo && videoRef.current) {
-          videoRef.current.play().catch((error) => {
-            console.error('Error playing video:', error);
-          });
+          videoRef.current.play()
+            .then(() => {
+              // Only cache after successful playback
+              if (videoUrl) {
+                cacheService.cacheVideo(videoUrl, short.title, short.artist, short.cover).catch(() => {
+                  // Ignore cache errors
+                });
+              }
+            })
+            .catch((error) => {
+              console.error('Error playing video:', error);
+            });
         } else if (!isVideo && audioRef.current) {
-          audioRef.current.play().catch((error) => {
-            console.error('Error playing audio:', error);
-          });
+          audioRef.current.play()
+            .then(() => {
+              // Only cache after successful playback
+              if (audioUrl) {
+                cacheService.cacheAudio(audioUrl, short.title, short.artist, short.cover).catch(() => {
+                  // Ignore cache errors
+                });
+              }
+            })
+            .catch((error) => {
+              console.error('Error playing audio:', error);
+            });
         }
       }, 100);
       return () => clearTimeout(timeoutId);
@@ -323,12 +444,13 @@ function ShortCard({
         audioRef.current.currentTime = 0;
       }
     }
-  }, [isPlaying, shouldLoadMedia, isVideo]);
+  }, [isPlaying, shouldLoadMedia, isVideo, videoUrl, audioUrl, short.title, short.artist, short.cover]);
 
   return (
     <div
       data-short-index={index}
-      className="w-full h-screen snap-start snap-always flex items-center justify-center relative bg-black"
+      className="w-full h-screen snap-start snap-always flex items-center justify-center relative bg-black flex-shrink-0"
+      style={{ minHeight: '100vh' }}
     >
       {/* Video or Cover Image */}
       {isVideo && activeVideoUrl ? (
@@ -414,39 +536,45 @@ function ShortCard({
               <p className="text-white/70 text-sm truncate">{short.artist}</p>
             )}
           </div>
+        </div>
+      </div>
 
-          {/* Like/Dislike buttons */}
-          <div className="flex flex-col gap-4 items-center">
-            <button
-              onClick={onLike}
-              disabled={isUpdating}
-              className={`p-3 rounded-full transition-all ${
-                short.isLiked
-                  ? 'bg-white/20 text-red-500'
-                  : 'bg-white/10 text-white/70 hover:bg-white/20'
-              } ${isUpdating ? 'opacity-50' : ''}`}
-            >
-              {short.isLiked ? (
-                <Heart size={24} fill="currentColor" />
-              ) : (
-                <Heart size={24} />
-              )}
-            </button>
-            <span className="text-white text-xs font-medium">{short.likesCount}</span>
+      {/* Right side interaction buttons - centered vertically */}
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-6 items-center">
+        {/* Like button */}
+        <div className="flex flex-col gap-2 items-center">
+          <button
+            onClick={onLike}
+            disabled={isUpdating}
+            className={`p-3 rounded-full transition-all ${
+              short.isLiked
+                ? 'bg-black/30 text-pink-500'
+                : 'bg-black/30 text-white hover:bg-black/40'
+            } ${isUpdating ? 'opacity-50' : ''}`}
+          >
+            {short.isLiked ? (
+              <Heart size={28} fill="currentColor" />
+            ) : (
+              <Heart size={28} />
+            )}
+          </button>
+          <span className="text-white text-xs font-medium">{short.likesCount}</span>
+        </div>
 
-            <button
-              onClick={onDislike}
-              disabled={isUpdating}
-              className={`p-3 rounded-full transition-all ${
-                short.isDisliked
-                  ? 'bg-white/20 text-blue-500'
-                  : 'bg-white/10 text-white/70 hover:bg-white/20'
-              } ${isUpdating ? 'opacity-50' : ''}`}
-            >
-              <ThumbsDown size={24} fill={short.isDisliked ? 'currentColor' : 'none'} />
-            </button>
-            <span className="text-white text-xs font-medium">{short.dislikesCount}</span>
-          </div>
+        {/* Dislike button */}
+        <div className="flex flex-col gap-2 items-center">
+          <button
+            onClick={onDislike}
+            disabled={isUpdating}
+            className={`p-3 rounded-full transition-all ${
+              short.isDisliked
+                ? 'bg-black/30 text-red-500'
+                : 'bg-black/30 text-white hover:bg-black/40'
+            } ${isUpdating ? 'opacity-50' : ''}`}
+          >
+            <ThumbsDown size={28} fill={short.isDisliked ? 'currentColor' : 'none'} />
+          </button>
+          <span className="text-white text-xs font-medium">{short.dislikesCount}</span>
         </div>
       </div>
     </div>
