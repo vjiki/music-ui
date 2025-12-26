@@ -52,6 +52,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [originalQueue, setOriginalQueue] = useState<Song[]>([]); // Store original queue order for shuffle
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const cachedAudioRef = useRef<Set<string>>(new Set());
 
   // Memoize setLibrarySongs to prevent infinite re-renders
   // Use a ref to track the last set songs to prevent unnecessary updates
@@ -233,10 +234,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           await audio.play();
           setIsPlaying(true);
           
-          // Only cache after successful playback
-          cacheService.cacheAudio(transformedUrl, song.title, song.artist, song.cover).catch(() => {
-            // Ignore cache errors
-          });
+          // Only cache after successful playback (and only once)
+          if (!cachedAudioRef.current.has(transformedUrl)) {
+            cachedAudioRef.current.add(transformedUrl);
+            cacheService.cacheAudio(transformedUrl, song.title, song.artist, song.cover).catch(() => {
+              // Remove from set on error so we can retry
+              cachedAudioRef.current.delete(transformedUrl);
+            });
+          }
         } catch (error) {
           console.error('Error playing audio:', error);
           console.error('Audio URL:', transformedUrl);

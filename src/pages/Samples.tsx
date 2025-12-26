@@ -335,6 +335,7 @@ function ShortCard({
   const isVideo = short.type === 'SHORT_VIDEO';
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const cachedRef = useRef<Set<string>>(new Set());
 
   // Always transform URLs to use proxy (for all shorts)
   const videoUrl = short.video_url ? transformAudioUrl(short.video_url) : '';
@@ -408,10 +409,12 @@ function ShortCard({
         if (isVideo && videoRef.current) {
           videoRef.current.play()
             .then(() => {
-              // Only cache after successful playback
-              if (videoUrl) {
+              // Only cache after successful playback (and only once)
+              if (videoUrl && !cachedRef.current.has(videoUrl)) {
+                cachedRef.current.add(videoUrl);
                 cacheService.cacheVideo(videoUrl, short.title, short.artist, short.cover).catch(() => {
-                  // Ignore cache errors
+                  // Remove from set on error so we can retry
+                  cachedRef.current.delete(videoUrl);
                 });
               }
             })
@@ -421,10 +424,12 @@ function ShortCard({
         } else if (!isVideo && audioRef.current) {
           audioRef.current.play()
             .then(() => {
-              // Only cache after successful playback
-              if (audioUrl) {
+              // Only cache after successful playback (and only once)
+              if (audioUrl && !cachedRef.current.has(audioUrl)) {
+                cachedRef.current.add(audioUrl);
                 cacheService.cacheAudio(audioUrl, short.title, short.artist, short.cover).catch(() => {
-                  // Ignore cache errors
+                  // Remove from set on error so we can retry
+                  cachedRef.current.delete(audioUrl);
                 });
               }
             })

@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { serviceContainer } from '../core/di/ServiceContainer';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -17,9 +17,12 @@ function MessagesContent() {
   const [searchText, setSearchText] = useState('');
   const [selectedChat, setSelectedChat] = useState<ChatListItem | null>(null);
   const [showChatView, setShowChatView] = useState(false);
+  const lastLoadedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    // Prevent duplicate loads for the same user
+    if (isAuthenticated && currentUserId && lastLoadedUserIdRef.current !== currentUserId) {
+      lastLoadedUserIdRef.current = currentUserId;
       loadChats();
       loadFollowers();
     }

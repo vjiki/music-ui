@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { transformImageUrl } from '../utils/urlUtils';
 import { cacheService } from '../services/CacheService';
 
@@ -18,6 +18,7 @@ interface SafeImageProps {
 export default function SafeImage({ src, alt, className, fallback }: SafeImageProps) {
   const [hasError, setHasError] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const cachedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!src) {
@@ -35,6 +36,8 @@ export default function SafeImage({ src, alt, className, fallback }: SafeImagePr
           // Use cached image
           const blobUrl = URL.createObjectURL(cachedBlob);
           setImageSrc(blobUrl);
+          // Mark as cached to prevent duplicate cache operations
+          cachedRef.current.add(transformedSrc);
         } else {
           // Not in cache, use original URL (will cache on successful load)
           setImageSrc(transformedSrc);
@@ -48,14 +51,19 @@ export default function SafeImage({ src, alt, className, fallback }: SafeImagePr
     loadImage();
   }, [src]);
 
-  // Cache image only after it successfully loads
+  // Cache image only after it successfully loads (and only once)
   const handleImageLoad = () => {
     if (src) {
       const transformedSrc = transformImageUrl(src);
-      // Cache in background only after successful load
-      cacheService.cacheImage(transformedSrc).catch(() => {
-        // Ignore cache errors
-      });
+      // Only cache if we haven't already cached this image
+      if (!cachedRef.current.has(transformedSrc)) {
+        cachedRef.current.add(transformedSrc);
+        // Cache in background only after successful load
+        cacheService.cacheImage(transformedSrc).catch(() => {
+          // Remove from set on error so we can retry
+          cachedRef.current.delete(transformedSrc);
+        });
+      }
     }
   };
 

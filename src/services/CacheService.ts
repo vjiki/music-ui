@@ -21,6 +21,8 @@ class CacheService {
   private db: IDBDatabase | null = null;
   private cacheName = 'music-app-cache-v1';
   private cache: Cache | null = null;
+  // Track pending cache operations to prevent duplicate requests
+  private pendingCacheOps = new Map<string, Promise<void>>();
 
   private constructor() {
     this.init();
@@ -92,27 +94,55 @@ class CacheService {
 
   // Image Caching
   async cacheImage(url: string, title?: string, artist?: string): Promise<void> {
-    try {
-      const cache = await this.ensureCache();
-      const response = await fetch(url);
-      
-      if (response.ok) {
-        await cache.put(url, response.clone());
-        
-        const metadata: CachedItemMetadata = {
-          url,
-          cachedAt: Date.now(),
-          size: parseInt(response.headers.get('content-length') || '0', 10),
-          type: 'image',
-          title,
-          artist,
-        };
-
-        await this.saveMetadata(metadata);
-      }
-    } catch (error) {
-      console.error('Failed to cache image:', error);
+    // Check if already cached to avoid duplicate requests
+    const alreadyCached = await this.hasCachedImage(url);
+    if (alreadyCached) {
+      return;
     }
+
+    // Check if there's already a pending cache operation for this URL
+    const pendingOp = this.pendingCacheOps.get(url);
+    if (pendingOp) {
+      return pendingOp;
+    }
+
+    // Create the cache operation promise
+    const cacheOp = (async () => {
+      try {
+        const cache = await this.ensureCache();
+        // Double-check cache after acquiring lock (race condition protection)
+        const doubleCheck = await this.hasCachedImage(url);
+        if (doubleCheck) {
+          return;
+        }
+
+        const response = await fetch(url);
+        
+        if (response.ok) {
+          await cache.put(url, response.clone());
+          
+          const metadata: CachedItemMetadata = {
+            url,
+            cachedAt: Date.now(),
+            size: parseInt(response.headers.get('content-length') || '0', 10),
+            type: 'image',
+            title,
+            artist,
+          };
+
+          await this.saveMetadata(metadata);
+        }
+      } catch (error) {
+        console.error('Failed to cache image:', error);
+      } finally {
+        // Remove from pending operations
+        this.pendingCacheOps.delete(url);
+      }
+    })();
+
+    // Store the pending operation
+    this.pendingCacheOps.set(url, cacheOp);
+    return cacheOp;
   }
 
   async getCachedImage(url: string): Promise<Blob | null> {
@@ -141,28 +171,56 @@ class CacheService {
 
   // Audio Caching
   async cacheAudio(url: string, title?: string, artist?: string, coverURL?: string): Promise<void> {
-    try {
-      const cache = await this.ensureCache();
-      const response = await fetch(url);
-      
-      if (response.ok) {
-        await cache.put(url, response.clone());
-        
-        const metadata: CachedItemMetadata = {
-          url,
-          cachedAt: Date.now(),
-          size: parseInt(response.headers.get('content-length') || '0', 10),
-          type: 'audio',
-          title,
-          artist,
-          coverURL,
-        };
-
-        await this.saveMetadata(metadata);
-      }
-    } catch (error) {
-      console.error('Failed to cache audio:', error);
+    // Check if already cached to avoid duplicate requests
+    const alreadyCached = await this.hasCachedAudio(url);
+    if (alreadyCached) {
+      return;
     }
+
+    // Check if there's already a pending cache operation for this URL
+    const pendingOp = this.pendingCacheOps.get(url);
+    if (pendingOp) {
+      return pendingOp;
+    }
+
+    // Create the cache operation promise
+    const cacheOp = (async () => {
+      try {
+        const cache = await this.ensureCache();
+        // Double-check cache after acquiring lock (race condition protection)
+        const doubleCheck = await this.hasCachedAudio(url);
+        if (doubleCheck) {
+          return;
+        }
+
+        const response = await fetch(url);
+        
+        if (response.ok) {
+          await cache.put(url, response.clone());
+          
+          const metadata: CachedItemMetadata = {
+            url,
+            cachedAt: Date.now(),
+            size: parseInt(response.headers.get('content-length') || '0', 10),
+            type: 'audio',
+            title,
+            artist,
+            coverURL,
+          };
+
+          await this.saveMetadata(metadata);
+        }
+      } catch (error) {
+        console.error('Failed to cache audio:', error);
+      } finally {
+        // Remove from pending operations
+        this.pendingCacheOps.delete(url);
+      }
+    })();
+
+    // Store the pending operation
+    this.pendingCacheOps.set(url, cacheOp);
+    return cacheOp;
   }
 
   async getCachedAudioURL(url: string): Promise<string | null> {
@@ -193,28 +251,56 @@ class CacheService {
 
   // Video Caching
   async cacheVideo(url: string, title?: string, artist?: string, coverURL?: string): Promise<void> {
-    try {
-      const cache = await this.ensureCache();
-      const response = await fetch(url);
-      
-      if (response.ok) {
-        await cache.put(url, response.clone());
-        
-        const metadata: CachedItemMetadata = {
-          url,
-          cachedAt: Date.now(),
-          size: parseInt(response.headers.get('content-length') || '0', 10),
-          type: 'video',
-          title,
-          artist,
-          coverURL,
-        };
-
-        await this.saveMetadata(metadata);
-      }
-    } catch (error) {
-      console.error('Failed to cache video:', error);
+    // Check if already cached to avoid duplicate requests
+    const alreadyCached = await this.hasCachedVideo(url);
+    if (alreadyCached) {
+      return;
     }
+
+    // Check if there's already a pending cache operation for this URL
+    const pendingOp = this.pendingCacheOps.get(url);
+    if (pendingOp) {
+      return pendingOp;
+    }
+
+    // Create the cache operation promise
+    const cacheOp = (async () => {
+      try {
+        const cache = await this.ensureCache();
+        // Double-check cache after acquiring lock (race condition protection)
+        const doubleCheck = await this.hasCachedVideo(url);
+        if (doubleCheck) {
+          return;
+        }
+
+        const response = await fetch(url);
+        
+        if (response.ok) {
+          await cache.put(url, response.clone());
+          
+          const metadata: CachedItemMetadata = {
+            url,
+            cachedAt: Date.now(),
+            size: parseInt(response.headers.get('content-length') || '0', 10),
+            type: 'video',
+            title,
+            artist,
+            coverURL,
+          };
+
+          await this.saveMetadata(metadata);
+        }
+      } catch (error) {
+        console.error('Failed to cache video:', error);
+      } finally {
+        // Remove from pending operations
+        this.pendingCacheOps.delete(url);
+      }
+    })();
+
+    // Store the pending operation
+    this.pendingCacheOps.set(url, cacheOp);
+    return cacheOp;
   }
 
   async getCachedVideoURL(url: string): Promise<string | null> {
