@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useShorts } from '../hooks/useShorts';
 import { serviceContainer } from '../core/di/ServiceContainer';
@@ -20,6 +20,28 @@ function SamplesContent() {
   const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
   const [playingShortId, setPlayingShortId] = useState<string | null>(null);
   const [updatingShorts, setUpdatingShorts] = useState<Set<string>>(new Set());
+  const hasUserInteractedRef = useRef(false);
+
+  // Play short function - just sets the playing short ID
+  // The ShortCard component will handle actual playback via isPlaying prop
+  const playShort = useCallback((short: Short) => {
+    // Stop all currently playing media
+    videoRefs.current.forEach((video) => {
+      if (video) {
+        video.pause();
+        video.currentTime = 0;
+      }
+    });
+    audioRefs.current.forEach((audio) => {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    });
+
+    // Set the playing short ID - ShortCard will handle playback
+    setPlayingShortId(short.id);
+  }, []);
 
   // Update local shorts when fetched shorts change
   useEffect(() => {
@@ -42,7 +64,7 @@ function SamplesContent() {
       playShort(short);
       setLastPlayedIndex(currentIndex);
     }
-  }, [currentIndex, shorts, lastPlayedIndex]);
+  }, [currentIndex, shorts, lastPlayedIndex, playShort]);
 
   // Auto-play first short when shorts are loaded
   useEffect(() => {
@@ -52,28 +74,33 @@ function SamplesContent() {
       playShort(firstShort);
       setLastPlayedIndex(0);
     }
-  }, [shorts.length, lastPlayedIndex]);
+  }, [shorts.length, lastPlayedIndex, playShort]);
 
-  // Play short function - just sets the playing short ID
-  // The ShortCard component will handle actual playback via isPlaying prop
-  const playShort = (short: Short) => {
-    // Stop all currently playing media
-    videoRefs.current.forEach((video) => {
-      if (video) {
-        video.pause();
-        video.currentTime = 0;
+  // Handle user interaction to enable autoplay on mobile
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      if (!hasUserInteractedRef.current) {
+        hasUserInteractedRef.current = true;
+        // Try to play the current short after user interaction
+        if (shorts.length > 0 && currentIndex >= 0 && currentIndex < shorts.length) {
+          const short = shorts[currentIndex];
+          playShort(short);
+        }
       }
-    });
-    audioRefs.current.forEach((audio) => {
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
+    };
+
+    // Listen for any user interaction
+    const events = ['touchstart', 'touchend', 'mousedown', 'click'];
+    events.forEach(event => {
+      document.addEventListener(event, handleUserInteraction, { once: true, passive: true });
     });
 
-    // Set the playing short ID - ShortCard will handle playback
-    setPlayingShortId(short.id);
-  };
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserInteraction);
+      });
+    };
+  }, [shorts, currentIndex, playShort]);
 
   // Handle scroll to detect which short is in view
   const handleScroll = () => {
@@ -274,6 +301,12 @@ function SamplesContent() {
       className="h-full w-full overflow-y-scroll snap-y snap-mandatory bg-black pb-20"
       onScroll={handleScroll}
       onWheel={handleWheel}
+      onTouchStart={() => {
+        // Mark user interaction on touch
+        if (!hasUserInteractedRef.current) {
+          hasUserInteractedRef.current = true;
+        }
+      }}
       style={{ 
         scrollbarWidth: 'none', 
         msOverflowStyle: 'none',
@@ -370,13 +403,16 @@ function ShortCard({
           const cachedUrl = await cacheService.getCachedVideoURL(videoUrl);
           if (cachedUrl && videoRef.current) {
             videoRef.current.src = cachedUrl;
+            videoRef.current.load(); // Explicitly load for mobile
           } else if (videoRef.current) {
             videoRef.current.src = videoUrl;
+            videoRef.current.load(); // Explicitly load for mobile
           }
         } catch (error) {
           console.error('Error loading video from cache:', error);
           if (videoRef.current) {
             videoRef.current.src = videoUrl;
+            videoRef.current.load(); // Explicitly load for mobile
           }
         }
       };
@@ -387,13 +423,16 @@ function ShortCard({
           const cachedUrl = await cacheService.getCachedAudioURL(audioUrl);
           if (cachedUrl && audioRef.current) {
             audioRef.current.src = cachedUrl;
+            audioRef.current.load(); // Explicitly load for mobile
           } else if (audioRef.current) {
             audioRef.current.src = audioUrl;
+            audioRef.current.load(); // Explicitly load for mobile
           }
         } catch (error) {
           console.error('Error loading audio from cache:', error);
           if (audioRef.current) {
             audioRef.current.src = audioUrl;
+            audioRef.current.load(); // Explicitly load for mobile
           }
         }
       };
@@ -404,40 +443,106 @@ function ShortCard({
   // Auto-play when this card becomes active
   useEffect(() => {
     if (isPlaying && shouldLoadMedia) {
-      // Small delay to ensure refs are registered and src is set
-      const timeoutId = setTimeout(() => {
+      // Longer delay for mobile to ensure refs are registered and src is set
+      // Also wait for media to be ready
+      const attemptPlay = () => {
         if (isVideo && videoRef.current) {
-          videoRef.current.play()
-            .then(() => {
-              // Only cache after successful playback (and only once)
-              if (videoUrl && !cachedRef.current.has(videoUrl)) {
-                cachedRef.current.add(videoUrl);
-                cacheService.cacheVideo(videoUrl, short.title, short.artist, short.cover).catch(() => {
-                  // Remove from set on error so we can retry
-                  cachedRef.current.delete(videoUrl);
+          const video = videoRef.current;
+          // Ensure video is loaded before playing
+          if (video.readyState >= 2) { // HAVE_CURRENT_DATA
+            video.play()
+              .then(() => {
+                // Only cache after successful playback (and only once)
+                if (videoUrl && !cachedRef.current.has(videoUrl)) {
+                  cachedRef.current.add(videoUrl);
+                  cacheService.cacheVideo(videoUrl, short.title, short.artist, short.cover).catch(() => {
+                    // Remove from set on error so we can retry
+                    cachedRef.current.delete(videoUrl);
+                  });
+                }
+              })
+              .catch((error) => {
+                console.error('Error playing video:', error);
+                // Retry once after a short delay for mobile browsers
+                setTimeout(() => {
+                  if (video && video.readyState >= 2) {
+                    video.play().catch((err) => {
+                      console.error('Retry play failed:', err);
+                    });
+                  }
+                }, 500);
+              });
+          } else {
+            // Wait for video to load
+            const onLoadedData = () => {
+              video.play()
+                .then(() => {
+                  if (videoUrl && !cachedRef.current.has(videoUrl)) {
+                    cachedRef.current.add(videoUrl);
+                    cacheService.cacheVideo(videoUrl, short.title, short.artist, short.cover).catch(() => {
+                      cachedRef.current.delete(videoUrl);
+                    });
+                  }
+                })
+                .catch((error) => {
+                  console.error('Error playing video after load:', error);
                 });
-              }
-            })
-            .catch((error) => {
-              console.error('Error playing video:', error);
-            });
+              video.removeEventListener('loadeddata', onLoadedData);
+            };
+            video.addEventListener('loadeddata', onLoadedData);
+            video.load(); // Explicitly load the video
+          }
         } else if (!isVideo && audioRef.current) {
-          audioRef.current.play()
-            .then(() => {
-              // Only cache after successful playback (and only once)
-              if (audioUrl && !cachedRef.current.has(audioUrl)) {
-                cachedRef.current.add(audioUrl);
-                cacheService.cacheAudio(audioUrl, short.title, short.artist, short.cover).catch(() => {
-                  // Remove from set on error so we can retry
-                  cachedRef.current.delete(audioUrl);
+          const audio = audioRef.current;
+          // Ensure audio is loaded before playing
+          if (audio.readyState >= 2) { // HAVE_CURRENT_DATA
+            audio.play()
+              .then(() => {
+                // Only cache after successful playback (and only once)
+                if (audioUrl && !cachedRef.current.has(audioUrl)) {
+                  cachedRef.current.add(audioUrl);
+                  cacheService.cacheAudio(audioUrl, short.title, short.artist, short.cover).catch(() => {
+                    // Remove from set on error so we can retry
+                    cachedRef.current.delete(audioUrl);
+                  });
+                }
+              })
+              .catch((error) => {
+                console.error('Error playing audio:', error);
+                // Retry once after a short delay for mobile browsers
+                setTimeout(() => {
+                  if (audio && audio.readyState >= 2) {
+                    audio.play().catch((err) => {
+                      console.error('Retry play failed:', err);
+                    });
+                  }
+                }, 500);
+              });
+          } else {
+            // Wait for audio to load
+            const onLoadedData = () => {
+              audio.play()
+                .then(() => {
+                  if (audioUrl && !cachedRef.current.has(audioUrl)) {
+                    cachedRef.current.add(audioUrl);
+                    cacheService.cacheAudio(audioUrl, short.title, short.artist, short.cover).catch(() => {
+                      cachedRef.current.delete(audioUrl);
+                    });
+                  }
+                })
+                .catch((error) => {
+                  console.error('Error playing audio after load:', error);
                 });
-              }
-            })
-            .catch((error) => {
-              console.error('Error playing audio:', error);
-            });
+              audio.removeEventListener('loadeddata', onLoadedData);
+            };
+            audio.addEventListener('loadeddata', onLoadedData);
+            audio.load(); // Explicitly load the audio
+          }
         }
-      }, 100);
+      };
+
+      // Initial attempt with delay for mobile
+      const timeoutId = setTimeout(attemptPlay, 300);
       return () => clearTimeout(timeoutId);
     } else {
       if (videoRef.current) {
@@ -468,6 +573,7 @@ function ShortCard({
             className="w-full h-full object-cover"
             muted={false}
             preload="auto"
+            crossOrigin="anonymous"
           />
         </div>
       ) : (
@@ -499,6 +605,8 @@ function ShortCard({
           loop
           className="hidden"
           preload="auto"
+          playsInline
+          crossOrigin="anonymous"
         />
       )}
 
