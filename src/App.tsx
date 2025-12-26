@@ -11,6 +11,7 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import SongDetail from './pages/SongDetail';
 import Samples from './pages/Samples';
+import DataAndStorage from './pages/DataAndStorage';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/samples" element={<Samples />} />
+                <Route path="/data-and-storage" element={<DataAndStorage />} />
                 <Route path="/song/:songId" element={<SongDetail />} />
               </Routes>
             </Layout>

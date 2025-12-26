@@ -136,6 +136,7 @@ export default function Settings() {
             icon="💾"
             title="Data and Storage"
             iconColor="green"
+            onClick={() => navigate('/data-and-storage')}
           />
           <SettingsRow icon="♿" title="Accessibility" />
           <SettingsRow icon="🌐" title="Language and translations" />
@@ -293,15 +294,17 @@ function SettingsRow({
   subtitle,
   trailing,
   iconColor = 'white',
+  onClick,
 }: {
   icon: string;
   title: string;
   subtitle?: string;
   trailing?: React.ReactNode;
   iconColor?: string;
+  onClick?: () => void;
 }) {
   return (
-    <button className="w-full flex items-center gap-4 px-4 py-3 hover:bg-white hover:bg-opacity-5 transition-colors">
+    <button onClick={onClick} className="w-full flex items-center gap-4 px-4 py-3 hover:bg-white hover:bg-opacity-5 transition-colors">
       <span className="text-xl" style={{ color: iconColor === 'green' ? '#10b981' : 'inherit' }}>
         {icon}
       </span>

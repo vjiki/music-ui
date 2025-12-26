@@ -292,15 +292,111 @@ class CacheService {
         else if (item.type === 'video') video += item.size;
       });
 
+      // Convert bytes to GB
+      const toGB = (bytes: number) => bytes / (1024 * 1024 * 1024);
+
       return {
-        total: images + audio + video,
-        images,
-        audio,
-        video,
+        total: toGB(images + audio + video),
+        images: toGB(images),
+        audio: toGB(audio),
+        video: toGB(video),
       };
     } catch (error) {
       console.error('Failed to calculate cache size:', error);
       return { total: 0, images: 0, audio: 0, video: 0 };
+    }
+  }
+
+  // Get cache statistics with categories
+  async getCacheStatistics(): Promise<{ totalSize: number; categories: Array<{ name: string; size: number; percentage: number; color: string }> }> {
+    const cacheSize = await this.getCacheSize();
+    const categories: Array<{ name: string; size: number; percentage: number; color: string }> = [];
+
+    if (cacheSize.images > 0) {
+      categories.push({
+        name: 'Photos',
+        size: cacheSize.images,
+        percentage: cacheSize.total > 0 ? (cacheSize.images / cacheSize.total) * 100 : 0,
+        color: '#06b6d4', // cyan
+      });
+    }
+
+    if (cacheSize.audio > 0) {
+      categories.push({
+        name: 'Music',
+        size: cacheSize.audio,
+        percentage: cacheSize.total > 0 ? (cacheSize.audio / cacheSize.total) * 100 : 0,
+        color: '#ef4444', // red
+      });
+    }
+
+    if (cacheSize.video > 0) {
+      categories.push({
+        name: 'Videos',
+        size: cacheSize.video,
+        percentage: cacheSize.total > 0 ? (cacheSize.video / cacheSize.total) * 100 : 0,
+        color: '#a855f7', // purple
+      });
+    }
+
+    return {
+      totalSize: cacheSize.total,
+      categories,
+    };
+  }
+
+  // Get cached metadata
+  async getCachedImageMetadata(): Promise<CachedItemMetadata[]> {
+    try {
+      const db = await this.ensureDB();
+      const transaction = db.transaction(['metadata'], 'readonly');
+      const store = transaction.objectStore('metadata');
+      const index = store.index('type');
+      const allMetadata = await new Promise<CachedItemMetadata[]>((resolve, reject) => {
+        const request = index.getAll('image');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      return allMetadata;
+    } catch (error) {
+      console.error('Failed to get cached image metadata:', error);
+      return [];
+    }
+  }
+
+  async getCachedAudioMetadata(): Promise<CachedItemMetadata[]> {
+    try {
+      const db = await this.ensureDB();
+      const transaction = db.transaction(['metadata'], 'readonly');
+      const store = transaction.objectStore('metadata');
+      const index = store.index('type');
+      const allMetadata = await new Promise<CachedItemMetadata[]>((resolve, reject) => {
+        const request = index.getAll('audio');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      return allMetadata;
+    } catch (error) {
+      console.error('Failed to get cached audio metadata:', error);
+      return [];
+    }
+  }
+
+  async getCachedVideoMetadata(): Promise<CachedItemMetadata[]> {
+    try {
+      const db = await this.ensureDB();
+      const transaction = db.transaction(['metadata'], 'readonly');
+      const store = transaction.objectStore('metadata');
+      const index = store.index('type');
+      const allMetadata = await new Promise<CachedItemMetadata[]>((resolve, reject) => {
+        const request = index.getAll('video');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      return allMetadata;
+    } catch (error) {
+      console.error('Failed to get cached video metadata:', error);
+      return [];
     }
   }
 
@@ -339,6 +435,48 @@ class CacheService {
 
   async clearVideoCache(): Promise<void> {
     await this.clearCacheByType('video');
+  }
+
+  async clearCachedImage(url: string): Promise<void> {
+    try {
+      const cache = await this.ensureCache();
+      await cache.delete(url);
+      
+      const db = await this.ensureDB();
+      const transaction = db.transaction(['metadata'], 'readwrite');
+      const store = transaction.objectStore('metadata');
+      await store.delete(url);
+    } catch (error) {
+      console.error('Failed to clear cached image:', error);
+    }
+  }
+
+  async clearCachedAudio(url: string): Promise<void> {
+    try {
+      const cache = await this.ensureCache();
+      await cache.delete(url);
+      
+      const db = await this.ensureDB();
+      const transaction = db.transaction(['metadata'], 'readwrite');
+      const store = transaction.objectStore('metadata');
+      await store.delete(url);
+    } catch (error) {
+      console.error('Failed to clear cached audio:', error);
+    }
+  }
+
+  async clearCachedVideo(url: string): Promise<void> {
+    try {
+      const cache = await this.ensureCache();
+      await cache.delete(url);
+      
+      const db = await this.ensureDB();
+      const transaction = db.transaction(['metadata'], 'readwrite');
+      const store = transaction.objectStore('metadata');
+      await store.delete(url);
+    } catch (error) {
+      console.error('Failed to clear cached video:', error);
+    }
   }
 
   private async clearCacheByType(type: 'image' | 'audio' | 'video'): Promise<void> {
