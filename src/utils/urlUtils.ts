@@ -35,7 +35,7 @@ export function transformImageUrl(url: string): string {
     if (fileId) {
       // Use backend proxy endpoint to serve Google Drive images
       // This avoids CORS and 403 errors
-      const API_BASE_URL = 'https://music-back-g2u6.onrender.com';
+      const API_BASE_URL = 'https://music-bird.up.railway.app';
       return `${API_BASE_URL}/api/v1/proxy/image?fileId=${encodeURIComponent(fileId)}`;
     }
   }
@@ -82,7 +82,7 @@ export function transformAudioUrl(url: string): string {
     if (fileId) {
       // Use backend proxy endpoint to serve Google Drive audio
       // This avoids CORS and 403 errors
-      const API_BASE_URL = 'https://music-back-g2u6.onrender.com';
+      const API_BASE_URL = 'https://music-bird.up.railway.app';
       return `${API_BASE_URL}/api/v1/proxy/audio?fileId=${encodeURIComponent(fileId)}`;
     }
   }

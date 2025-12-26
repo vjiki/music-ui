@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { Message } from '../types';
 import type { IMessagesService } from '../core/interfaces/IMessagesService';
 
-const API_BASE_URL = 'https://music-back-g2u6.onrender.com';
+const API_BASE_URL = 'https://music-bird.up.railway.app';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
